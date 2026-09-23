@@ -1,0 +1,57 @@
+package db
+
+import "database/sql"
+
+type User struct {
+	ID          int64
+	DisplayName string
+	FCMToken    sql.NullString
+	APIKeyHash  string
+	CreatedAt   int64
+}
+
+type Invite struct {
+	Code          string
+	InviterUserID int64
+	ExpiresAt     int64
+	Used          bool
+	CreatedAt     int64
+}
+
+type Pairing struct {
+	ID        int64
+	UserAID   int64
+	UserBID   int64
+	ACanWakeB bool
+	BCanWakeA bool
+	CreatedAt int64
+}
+
+// CanWake reports whether fromUserID currently has permission to wake
+// toUserID under this pairing. Returns false for any pair of ids that
+// aren't actually the two members of this pairing.
+func (p *Pairing) CanWake(fromUserID, toUserID int64) bool {
+	if p.UserAID == fromUserID && p.UserBID == toUserID {
+		return p.ACanWakeB
+	}
+	if p.UserBID == fromUserID && p.UserAID == toUserID {
+		return p.BCanWakeA
+	}
+	return false
+}
+
+// Trigger is the raw DB row. sql.Null* fields marshal to JSON as
+// {"String":...,"Valid":...} by default, which is not a fit API shape --
+// the api package converts this to a plain DTO before serving it (see
+// api.triggerView in trigger.go), so no json tags are needed here.
+type Trigger struct {
+	ID            int64
+	PairingID     int64
+	FromUserID    int64
+	ToUserID      int64
+	CreatedAt     int64
+	FCMMessageID  sql.NullString
+	SendStatus    string
+	SendError     sql.NullString
+	AckReceivedAt sql.NullInt64
+}

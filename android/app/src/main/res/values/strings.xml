@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WakeLink</string>
+
+    <string name="armed_notification_channel_name">대기 상태</string>
+    <string name="armed_notification_title_on">WakeLink 대기 중</string>
+    <string name="armed_notification_title_off">WakeLink 비활성화됨</string>
+
+    <string name="alarm_notification_channel_name">깨우기 알람</string>
+    <string name="alarm_notification_title">%1$s 님이 깨우고 있어요</string>
+    <string name="alarm_stop_action">중지</string>
+    <string name="unknown_sender">누군가</string>
+</resources>

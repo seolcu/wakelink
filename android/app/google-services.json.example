@@ -1,0 +1,30 @@
+{
+  "_comment": "PLACEHOLDER FILE -- replace with the real google-services.json from your own Firebase project (Firebase console > Project settings > your Android app > download google-services.json). This one is here only so the google-services Gradle plugin has a syntactically valid file to find; FCM will not actually work until you replace it. See /docs/self-hosting.md.",
+  "project_info": {
+    "project_number": "000000000000",
+    "project_id": "wakelink-placeholder",
+    "storage_bucket": "wakelink-placeholder.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "android_client_info": {
+          "package_name": "app.wakelink.android"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "REPLACE_WITH_YOUR_FIREBASE_API_KEY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,14 @@
+# Local dev / self-hosting compose file. Binds to 127.0.0.1 only -- put a
+# reverse proxy (Caddy, nginx, Tailscale serve, ...) in front for real
+# public exposure. See /docs/self-hosting.md.
+services:
+  wakelinkd:
+    build: .
+    ports:
+      - "127.0.0.1:8080:8080"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/data
+      - ./secrets:/secrets:ro
+    restart: unless-stopped

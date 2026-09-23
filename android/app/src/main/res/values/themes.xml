@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.WakeLink" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Ringing screen theme: shows over the lock screen and keeps the
+         screen on for as long as the activity is displayed. -->
+    <style name="Theme.WakeLink.Ringing" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowFullscreen">true</item>
+    </style>
+</resources>

@@ -1,0 +1,7 @@
+This directory is intentionally empty in source control.
+
+AlarmForegroundService uses the device's own default alarm sound
+(RingtoneManager.TYPE_ALARM) rather than a bundled audio file, so nothing
+needs to be added here for the alarm to work. Keep this .gitkeep only if
+you later want to bundle a custom fallback sound as res/raw/alarm_loop.*
+and wire it in as an alternative to the system default.
