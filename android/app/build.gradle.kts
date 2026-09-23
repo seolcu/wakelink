@@ -36,7 +36,7 @@ android {
         // official-build install work against your own server, because
         // FCM tokens are scoped to the Firebase project baked into
         // google-services.json.
-        buildConfigField("String", "DEFAULT_SERVER_BASE_URL", "\"https://api.wakelink.app\"")
+        buildConfigField("String", "DEFAULT_SERVER_BASE_URL", "\"https://wake.seolcu.com\"")
     }
 
     signingConfigs {
