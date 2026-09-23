@@ -1,0 +1,46 @@
+name: android
+
+on:
+  push:
+    paths:
+      - "android/**"
+      - ".github/workflows/android.yml"
+  pull_request:
+    paths:
+      - "android/**"
+      - ".github/workflows/android.yml"
+
+defaults:
+  run:
+    working-directory: android
+
+jobs:
+  build-and-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Use placeholder Firebase config
+        # CI has no real Firebase project; the google-services plugin only
+        # needs a structurally valid file to build/lint against. Anyone
+        # forking this repo gets the same placeholder locally -- see
+        # /docs/self-hosting.md for how to swap in a real one.
+        run: cp app/google-services.json.example app/google-services.json
+
+      - name: Lint
+        run: ./gradlew lintDebug
+
+      - name: Assemble debug APK
+        run: ./gradlew assembleDebug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk

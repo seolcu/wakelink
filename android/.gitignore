@@ -13,3 +13,6 @@
 # app/google-services.json.example (a placeholder) is meant to be
 # committed. See /docs/self-hosting.md.
 app/google-services.json
+
+# Release signing key + its passwords -- never commit.
+/keystore/
