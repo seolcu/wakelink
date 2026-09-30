@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -80,17 +81,24 @@ func (s *Server) handleTrigger(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	msgID, sendErr := s.FCM.SendWakeTrigger(ctx, recipient.FCMToken.String, trig.ID, user.DisplayName)
 	if errors.Is(sendErr, fcm.ErrUnregistered) {
+		s.Metrics.TriggersFailed.Add(1)
 		_ = s.DB.UpdateTriggerSendResult(r.Context(), trig.ID, "fcm_error", "", sendErr.Error())
 		_ = s.DB.ClearFCMToken(r.Context(), recipient.ID)
 		writeError(w, http.StatusUnprocessableEntity, "recipient device is not registered for push")
 		return
 	}
 	if sendErr != nil {
-		_ = s.DB.UpdateTriggerSendResult(r.Context(), trig.ID, "fcm_error", "", sendErr.Error())
+		s.Metrics.TriggersFailed.Add(1)
+		if err := s.DB.UpdateTriggerSendResult(r.Context(), trig.ID, "fcm_error", "", sendErr.Error()); err != nil {
+			log.Printf("update trigger send result (fcm_error): %v", err)
+		}
 		writeError(w, http.StatusBadGateway, "failed to deliver push")
 		return
 	}
-	_ = s.DB.UpdateTriggerSendResult(r.Context(), trig.ID, "sent", msgID, "")
+	s.Metrics.TriggersSent.Add(1)
+	if err := s.DB.UpdateTriggerSendResult(r.Context(), trig.ID, "sent", msgID, ""); err != nil {
+		log.Printf("update trigger send result (sent): %v", err)
+	}
 
 	writeJSON(w, http.StatusCreated, map[string]interface{}{
 		"trigger_id": trig.ID,
@@ -116,6 +124,7 @@ func (s *Server) handleAckTrigger(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
+	s.Metrics.TriggersAcked.Add(1)
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 

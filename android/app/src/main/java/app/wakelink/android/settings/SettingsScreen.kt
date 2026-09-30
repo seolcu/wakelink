@@ -21,6 +21,7 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.DoNotDisturbOn
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.PhoneLocked
 import androidx.compose.material.icons.rounded.PowerSettingsNew
@@ -94,6 +95,8 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
     var accountError by remember { mutableStateOf<String?>(null) }
     var renaming by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var confirmRotateKey by remember { mutableStateOf(false) }
+    var keyRotated by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         armed = settings.armed.first()
@@ -157,6 +160,12 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                     StatusPill(StatusKind.ERROR, it, Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp))
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                SettingsRow(
+                    icon = Icons.Rounded.Key,
+                    title = "API 키 재발급",
+                    supporting = if (keyRotated) "새 키로 바꿨어요. 이전 키는 더 이상 쓸 수 없어요" else "키가 유출된 것 같을 때만 쓰세요. 연결은 그대로 유지돼요",
+                    onClick = { confirmRotateKey = true },
+                )
                 SettingsRow(
                     icon = Icons.Rounded.DeleteForever,
                     title = "계정 삭제",
@@ -297,6 +306,31 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                 }) { Text("저장") }
             },
             dismissButton = { TextButton(onClick = { renaming = false }) { Text("취소") } },
+        )
+    }
+
+    if (confirmRotateKey) {
+        AlertDialog(
+            onDismissRequest = { confirmRotateKey = false },
+            icon = { Icon(Icons.Rounded.Key, contentDescription = null) },
+            title = { Text("API 키를 재발급할까요?") },
+            text = { Text("이 기기에 저장된 키가 즉시 새 키로 바뀌고, 이전 키는 바로 무효화돼요.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmRotateKey = false
+                    scope.launch {
+                        try {
+                            val rotated = api.rotateApiKey()
+                            tokenStore.save(tokenStore.userId, rotated.apiKey)
+                            keyRotated = true
+                            accountError = null
+                        } catch (e: Exception) {
+                            accountError = "키 재발급 실패: ${e.toUserMessage()}"
+                        }
+                    }
+                }) { Text("재발급") }
+            },
+            dismissButton = { TextButton(onClick = { confirmRotateKey = false }) { Text("취소") } },
         )
     }
 

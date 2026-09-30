@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -15,6 +16,7 @@ import (
 
 	"wakelink/internal/db"
 	"wakelink/internal/fcm"
+	"wakelink/internal/metrics"
 	"wakelink/internal/ratelimit"
 )
 
@@ -51,6 +53,8 @@ func newTestServer(t *testing.T) (*Server, *fakeSender) {
 			DailyCap: 20,
 		},
 		InviteTTL: 10 * time.Minute,
+		Metrics:   &metrics.Counters{},
+		Version:   "test",
 	}, sender
 }
 
@@ -481,5 +485,171 @@ func TestMeGetPatchDelete(t *testing.T) {
 	}
 	if got := listPairings(t, router, bob.APIKey); len(got) != 0 {
 		t.Fatalf("bob should have no pairings after alice deleted her account, got %+v", got)
+	}
+}
+
+func TestReadJSONRejectsOversizedBody(t *testing.T) {
+	s, _ := newTestServer(t)
+	router := s.Router()
+
+	oversized := strings.Repeat("x", maxRequestBodyBytes+1)
+	rec := doJSON(t, router, http.MethodPost, "/v1/register", "", registerRequest{DisplayName: oversized})
+	if rec.Code == http.StatusCreated {
+		t.Fatalf("expected oversized body to be rejected, got status %d", rec.Code)
+	}
+}
+
+func TestListPairingsRespectsLimit(t *testing.T) {
+	s, _ := newTestServer(t)
+	router := s.Router()
+	alice := register(t, router, "Alice", "alice-token")
+
+	for i := 0; i < 3; i++ {
+		code := createInvite(t, router, alice.APIKey)
+		partner := register(t, router, fmt.Sprintf("Partner%d", i), fmt.Sprintf("partner-%d-token", i))
+		rec := doJSON(t, router, http.MethodPost, "/v1/invites/accept", partner.APIKey, acceptInviteRequest{Code: code})
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("accept invite %d: status %d body %s", i, rec.Code, rec.Body.String())
+		}
+	}
+
+	rec := doJSON(t, router, http.MethodGet, "/v1/pairings?limit=2", alice.APIKey, nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("list pairings: status %d body %s", rec.Code, rec.Body.String())
+	}
+	var pairings []pairingView
+	if err := json.Unmarshal(rec.Body.Bytes(), &pairings); err != nil {
+		t.Fatalf("decode pairings: %v", err)
+	}
+	if len(pairings) != 2 {
+		t.Fatalf("expected 2 pairings with limit=2, got %d", len(pairings))
+	}
+}
+
+func TestVersionEndpoint(t *testing.T) {
+	s, _ := newTestServer(t)
+	router := s.Router()
+
+	rec := doJSON(t, router, http.MethodGet, "/version", "", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("version: status %d body %s", rec.Code, rec.Body.String())
+	}
+	var body map[string]string
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode version: %v", err)
+	}
+	if body["service"] != "wakelinkd" || body["go_version"] == "" {
+		t.Fatalf("unexpected version body: %+v", body)
+	}
+}
+
+func TestMetricsCountsTriggers(t *testing.T) {
+	s, _ := newTestServer(t)
+	router := s.Router()
+	alice, bob, pairingID := pairUp(t, router)
+
+	rec := doJSON(t, router, http.MethodPost, pairingPath(pairingID)+"/trigger", bob.APIKey, nil)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("trigger: status %d body %s", rec.Code, rec.Body.String())
+	}
+	var triggered struct {
+		TriggerID int64 `json:"trigger_id"`
+	}
+	_ = json.Unmarshal(rec.Body.Bytes(), &triggered)
+
+	ackPath := "/v1/triggers/" + strconv.FormatInt(triggered.TriggerID, 10) + "/ack"
+	rec = doJSON(t, router, http.MethodPost, ackPath, alice.APIKey, nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("ack: status %d body %s", rec.Code, rec.Body.String())
+	}
+
+	rec = doJSON(t, router, http.MethodGet, "/v1/metrics", "", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("metrics: status %d body %s", rec.Code, rec.Body.String())
+	}
+	var counts map[string]int64
+	if err := json.Unmarshal(rec.Body.Bytes(), &counts); err != nil {
+		t.Fatalf("decode metrics: %v", err)
+	}
+	if counts["triggers_sent"] < 1 {
+		t.Fatalf("expected triggers_sent >= 1, got %+v", counts)
+	}
+	if counts["triggers_acked"] < 1 {
+		t.Fatalf("expected triggers_acked >= 1, got %+v", counts)
+	}
+}
+
+func TestRateLimitDailyCap(t *testing.T) {
+	s, _ := newTestServer(t)
+	s.RateLimit.Cooldown = 0
+	s.RateLimit.DailyCap = 1
+	router := s.Router()
+	_, bob, pairingID := pairUp(t, router)
+
+	rec := doJSON(t, router, http.MethodPost, pairingPath(pairingID)+"/trigger", bob.APIKey, nil)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("first trigger: status %d body %s", rec.Code, rec.Body.String())
+	}
+
+	rec = doJSON(t, router, http.MethodPost, pairingPath(pairingID)+"/trigger", bob.APIKey, nil)
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected 429 at daily cap, got status %d body %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "daily") {
+		t.Fatalf("expected daily-cap error message, got body %s", rec.Body.String())
+	}
+}
+
+func TestTriggerFcmSendFailureReturnsBadGateway(t *testing.T) {
+	s, sender := newTestServer(t)
+	sender.err = errors.New("boom")
+	router := s.Router()
+	_, bob, pairingID := pairUp(t, router)
+
+	rec := doJSON(t, router, http.MethodPost, pairingPath(pairingID)+"/trigger", bob.APIKey, nil)
+	if rec.Code != http.StatusBadGateway {
+		t.Fatalf("expected 502 on fcm send failure, got status %d body %s", rec.Code, rec.Body.String())
+	}
+
+	rec = doJSON(t, router, http.MethodGet, "/v1/triggers?pairing_id="+strconv.FormatInt(pairingID, 10), bob.APIKey, nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("list triggers: status %d body %s", rec.Code, rec.Body.String())
+	}
+	var triggers []triggerView
+	if err := json.Unmarshal(rec.Body.Bytes(), &triggers); err != nil {
+		t.Fatalf("decode triggers: %v", err)
+	}
+	if len(triggers) != 1 {
+		t.Fatalf("expected exactly one trigger row, got %d", len(triggers))
+	}
+	if triggers[0].SendStatus != "fcm_error" || triggers[0].SendError == nil {
+		t.Fatalf("expected fcm_error send status with an error message, got %+v", triggers[0])
+	}
+}
+
+func TestRotateApiKeyInvalidatesOldKey(t *testing.T) {
+	s, _ := newTestServer(t)
+	router := s.Router()
+	alice := register(t, router, "Alice", "alice-token")
+
+	rec := doJSON(t, router, http.MethodPost, "/v1/me/rotate-key", alice.APIKey, nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("rotate key: status %d body %s", rec.Code, rec.Body.String())
+	}
+	var rotated struct {
+		APIKey string `json:"api_key"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &rotated); err != nil {
+		t.Fatalf("decode rotate response: %v", err)
+	}
+	if rotated.APIKey == "" || rotated.APIKey == alice.APIKey {
+		t.Fatalf("expected a fresh, non-empty api key, got %q", rotated.APIKey)
+	}
+
+	if rec := doJSON(t, router, http.MethodGet, "/v1/me", alice.APIKey, nil); rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected old key to be invalidated, got status %d", rec.Code)
+	}
+	if rec := doJSON(t, router, http.MethodGet, "/v1/me", rotated.APIKey, nil); rec.Code != http.StatusOK {
+		t.Fatalf("expected new key to work, got status %d body %s", rec.Code, rec.Body.String())
 	}
 }

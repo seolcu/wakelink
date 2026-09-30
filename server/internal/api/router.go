@@ -15,6 +15,8 @@ func (s *Server) Router() http.Handler {
 	r.Use(middleware.Recoverer)
 
 	r.Get("/healthz", s.handleHealthz)
+	r.Get("/version", s.handleVersion)
+	r.Get("/v1/metrics", s.handleMetrics)
 	r.Post("/v1/register", s.handleRegister)
 
 	r.Group(func(r chi.Router) {
@@ -31,6 +33,7 @@ func (s *Server) Router() http.Handler {
 		r.Post("/v1/pairings/{id}/trigger", s.handleTrigger)
 		r.Post("/v1/triggers/{id}/ack", s.handleAckTrigger)
 		r.Get("/v1/triggers", s.handleListTriggers)
+		r.Post("/v1/me/rotate-key", s.handleRotateKey)
 	})
 
 	return r

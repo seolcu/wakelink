@@ -64,10 +64,11 @@ func scanPairing(row *sql.Row) (*Pairing, error) {
 	return &p, nil
 }
 
-func (d *DB) ListPairingsForUser(ctx context.Context, userID int64) ([]Pairing, error) {
+func (d *DB) ListPairingsForUser(ctx context.Context, userID int64, limit int) ([]Pairing, error) {
 	rows, err := d.QueryContext(ctx,
-		`SELECT id, user_a_id, user_b_id, a_can_wake_b, b_can_wake_a, created_at FROM pairings WHERE user_a_id = ? OR user_b_id = ? ORDER BY created_at DESC`,
-		userID, userID,
+		`SELECT id, user_a_id, user_b_id, a_can_wake_b, b_can_wake_a, created_at FROM pairings
+		 WHERE user_a_id = ? OR user_b_id = ? ORDER BY created_at DESC LIMIT ?`,
+		userID, userID, limit,
 	)
 	if err != nil {
 		return nil, err

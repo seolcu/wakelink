@@ -2,6 +2,7 @@ package api
 
 import (
 	"crypto/rand"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -42,7 +43,12 @@ func (s *Server) handleCreateInvite(w http.ResponseWriter, r *http.Request) {
 		if _, err := s.DB.GetInvite(r.Context(), c); err == db.ErrNotFound {
 			code = c
 			break
+		} else if err != nil {
+			log.Printf("check invite code collision: %v", err)
+			writeError(w, http.StatusInternalServerError, "failed to allocate invite code")
+			return
 		}
+		// err == nil: genuine collision, retry with a fresh code.
 	}
 	if code == "" {
 		writeError(w, http.StatusInternalServerError, "failed to allocate invite code")
@@ -73,7 +79,7 @@ func (s *Server) handleAcceptInvite(w http.ResponseWriter, r *http.Request) {
 	user := userFromContext(r)
 
 	var req acceptInviteRequest
-	if err := readJSON(r, &req); err != nil || req.Code == "" {
+	if err := readJSON(w, r, &req); err != nil || req.Code == "" {
 		writeError(w, http.StatusBadRequest, "pairing_code is required")
 		return
 	}
@@ -140,7 +146,15 @@ type pairingView struct {
 
 func (s *Server) handleListPairings(w http.ResponseWriter, r *http.Request) {
 	user := userFromContext(r)
-	pairings, err := s.DB.ListPairingsForUser(r.Context(), user.ID)
+
+	limit := 50
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 100 {
+			limit = parsed
+		}
+	}
+
+	pairings, err := s.DB.ListPairingsForUser(r.Context(), user.ID, limit)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to list pairings")
 		return
@@ -187,7 +201,7 @@ func (s *Server) handlePatchPairing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req patchPairingRequest
-	if err := readJSON(r, &req); err != nil || req.ICanWakeThem == nil {
+	if err := readJSON(w, r, &req); err != nil || req.ICanWakeThem == nil {
 		writeError(w, http.StatusBadRequest, "i_can_wake_them is required")
 		return
 	}

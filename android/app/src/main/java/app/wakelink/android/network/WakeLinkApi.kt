@@ -22,6 +22,9 @@ interface WakeLinkApi {
     @DELETE("v1/me")
     suspend fun deleteMe(): Response<Unit>
 
+    @POST("v1/me/rotate-key")
+    suspend fun rotateApiKey(): RotateKeyResponse
+
     @POST("v1/devices/token")
     suspend fun updateToken(@Body body: UpdateTokenRequest): Response<Unit>
 

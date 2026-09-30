@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -16,15 +17,34 @@ import (
 	"wakelink/internal/api"
 	"wakelink/internal/db"
 	"wakelink/internal/fcm"
+	"wakelink/internal/metrics"
 	"wakelink/internal/ratelimit"
 )
 
 func main() {
 	dbPath := getenv("DB_PATH", "./data/wakelink.db")
 	listenAddr := getenv("LISTEN_ADDR", ":8080")
-	cooldownSec := getenvInt("RATE_LIMIT_COOLDOWN_SECONDS", 30)
-	dailyCap := getenvInt("RATE_LIMIT_DAILY_CAP", 20)
-	inviteTTLSec := getenvInt("INVITE_TTL_SECONDS", 600)
+	cooldownSec, err := getenvInt("RATE_LIMIT_COOLDOWN_SECONDS", 30)
+	if err != nil {
+		log.Fatal(err)
+	}
+	dailyCap, err := getenvInt("RATE_LIMIT_DAILY_CAP", 20)
+	if err != nil {
+		log.Fatal(err)
+	}
+	inviteTTLSec, err := getenvInt("INVITE_TTL_SECONDS", 600)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if cooldownSec < 0 {
+		log.Fatalf("RATE_LIMIT_COOLDOWN_SECONDS must be >= 0, got %d", cooldownSec)
+	}
+	if dailyCap < 1 {
+		log.Fatalf("RATE_LIMIT_DAILY_CAP must be >= 1, got %d", dailyCap)
+	}
+	if inviteTTLSec < 1 {
+		log.Fatalf("INVITE_TTL_SECONDS must be >= 1, got %d", inviteTTLSec)
+	}
 	fcmServiceAccountPath := os.Getenv("FCM_SERVICE_ACCOUNT_PATH")
 	fcmMock := os.Getenv("FCM_MOCK") == "true"
 
@@ -59,6 +79,9 @@ func main() {
 			DailyCap: dailyCap,
 		},
 		InviteTTL: time.Duration(inviteTTLSec) * time.Second,
+		Metrics:   &metrics.Counters{},
+		Version:   "dev",
+		StartedAt: time.Now(),
 	}
 
 	httpServer := &http.Server{
@@ -89,6 +112,9 @@ func main() {
 	if err := httpServer.Shutdown(ctx); err != nil {
 		log.Printf("shutdown error: %v", err)
 	}
+	if err := database.Close(); err != nil {
+		log.Printf("close db: %v", err)
+	}
 }
 
 // purgeExpiredInvites deletes dead invite codes once at startup and then
@@ -117,11 +143,14 @@ func getenv(key, fallback string) string {
 	return fallback
 }
 
-func getenvInt(key string, fallback int) int {
-	if v := os.Getenv(key); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			return n
-		}
+func getenvInt(key string, fallback int) (int, error) {
+	v := os.Getenv(key)
+	if v == "" {
+		return fallback, nil
 	}
-	return fallback
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		return 0, fmt.Errorf("%s: invalid integer %q: %w", key, v, err)
+	}
+	return n, nil
 }

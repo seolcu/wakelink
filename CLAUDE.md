@@ -158,7 +158,11 @@ link alone could pair someone without their explicit action.
 
 `/v1/me` (GET/PATCH/DELETE) covers the account: display name (validated by
 `normalizeDisplayName`, max 40 runes -- mirrored by
-`MAX_DISPLAY_NAME_LENGTH` in the app) and full account deletion.
+`MAX_DISPLAY_NAME_LENGTH` in the app) and full account deletion. `POST
+/v1/me/rotate-key` swaps the caller's API key in place (old key dies
+immediately, pairings survive). Unauthenticated `GET /version` and
+`GET /v1/metrics` expose build info and in-memory trigger counters
+(`internal/metrics`, reset on restart) for self-hosters.
 
 None of the foreign keys cascade and `foreign_keys` is on, so any delete
 must remove children first, in a transaction (`DeletePairing`,

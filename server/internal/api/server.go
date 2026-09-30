@@ -8,6 +8,7 @@ import (
 
 	"wakelink/internal/db"
 	"wakelink/internal/fcm"
+	"wakelink/internal/metrics"
 	"wakelink/internal/ratelimit"
 )
 
@@ -16,4 +17,7 @@ type Server struct {
 	FCM       fcm.Sender
 	RateLimit ratelimit.Limiter
 	InviteTTL time.Duration
+	Metrics   *metrics.Counters
+	Version   string
+	StartedAt time.Time
 }

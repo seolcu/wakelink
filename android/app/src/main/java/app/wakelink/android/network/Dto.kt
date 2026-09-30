@@ -70,3 +70,7 @@ data class MeResponse(
 data class PatchMeRequest(
     @Json(name = "display_name") val displayName: String,
 )
+
+data class RotateKeyResponse(
+    @Json(name = "api_key") val apiKey: String,
+)

@@ -2,6 +2,8 @@ package api
 
 import (
 	"net/http"
+
+	"wakelink/internal/auth"
 )
 
 type meView struct {
@@ -24,7 +26,7 @@ func (s *Server) handlePatchMe(w http.ResponseWriter, r *http.Request) {
 	user := userFromContext(r)
 
 	var req patchMeRequest
-	if err := readJSON(r, &req); err != nil {
+	if err := readJSON(w, r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -50,4 +52,21 @@ func (s *Server) handleDeleteMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// handleRotateKey issues the caller a new API key and immediately
+// invalidates their old one, for recovery from a suspected key leak
+// without forcing a full re-register (which would also lose all pairings).
+func (s *Server) handleRotateKey(w http.ResponseWriter, r *http.Request) {
+	user := userFromContext(r)
+	rawKey, hash, err := auth.GenerateAPIKey()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to generate api key")
+		return
+	}
+	if err := s.DB.RotateAPIKeyHash(r.Context(), user.ID, hash); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to rotate api key")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"api_key": rawKey})
 }

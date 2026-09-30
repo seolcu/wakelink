@@ -71,6 +71,23 @@ func (d *DB) UpdateDisplayName(ctx context.Context, userID int64, displayName st
 	return err
 }
 
+// RotateAPIKeyHash overwrites userID's stored key hash, immediately
+// invalidating whatever key was previously issued to them.
+func (d *DB) RotateAPIKeyHash(ctx context.Context, userID int64, newHash string) error {
+	res, err := d.ExecContext(ctx, `UPDATE users SET api_key_hash = ? WHERE id = ?`, newHash, userID)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 // DeleteUser removes a user and everything that references them: their
 // trigger history (sent and received), every pairing they're a member of,
 // and any outstanding invites. Children go first because none of these

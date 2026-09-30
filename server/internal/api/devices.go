@@ -11,7 +11,7 @@ type updateTokenRequest struct {
 // tokens rotate periodically and a stale one silently drops pushes.
 func (s *Server) handleUpdateToken(w http.ResponseWriter, r *http.Request) {
 	var req updateTokenRequest
-	if err := readJSON(r, &req); err != nil || req.FCMToken == "" {
+	if err := readJSON(w, r, &req); err != nil || req.FCMToken == "" {
 		writeError(w, http.StatusBadRequest, "fcm_token is required")
 		return
 	}
