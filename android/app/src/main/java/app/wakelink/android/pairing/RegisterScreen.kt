@@ -19,7 +19,11 @@ import app.wakelink.android.data.TokenStore
 import app.wakelink.android.fcm.currentFcmToken
 import app.wakelink.android.network.ApiClient
 import app.wakelink.android.network.RegisterRequest
+import app.wakelink.android.network.toUserMessage
 import kotlinx.coroutines.launch
+
+/** Mirrors the server's maxDisplayNameLength (server/internal/api/register.go). */
+const val MAX_DISPLAY_NAME_LENGTH = 40
 
 @Composable
 fun RegisterScreen(onRegistered: () -> Unit) {
@@ -31,9 +35,10 @@ fun RegisterScreen(onRegistered: () -> Unit) {
 
     Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
         Text("WakeLink에서 쓸 이름을 입력하세요")
+        Text("연결된 사람에게만 보이고, 나중에 설정에서 바꿀 수 있어요.")
         OutlinedTextField(
             value = displayName,
-            onValueChange = { displayName = it },
+            onValueChange = { displayName = it.take(MAX_DISPLAY_NAME_LENGTH) },
             singleLine = true,
             modifier = Modifier.padding(top = 16.dp),
         )
@@ -53,7 +58,7 @@ fun RegisterScreen(onRegistered: () -> Unit) {
                         tokenStore.save(response.userId, response.apiKey)
                         onRegistered()
                     } catch (e: Exception) {
-                        error = "등록 실패: ${e.message}"
+                        error = "등록 실패: ${e.toUserMessage()}"
                     } finally {
                         busy = false
                     }

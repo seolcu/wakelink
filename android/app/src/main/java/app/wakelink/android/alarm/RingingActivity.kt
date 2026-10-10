@@ -17,6 +17,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import app.wakelink.android.data.DismissMode
@@ -53,32 +55,41 @@ class RingingActivity : ComponentActivity() {
             )
         }
 
-        val fromDisplayName = intent.getStringExtra(EXTRA_FROM_DISPLAY_NAME) ?: "?"
         val keyguardManager = getSystemService(KeyguardManager::class.java)
 
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    RingingScreen(
-                        fromDisplayName = fromDisplayName,
-                        onStopRequested = { requireUnlockFirst ->
-                            if (requireUnlockFirst && keyguardManager.isKeyguardLocked) {
-                                keyguardManager.requestDismissKeyguard(
-                                    this,
-                                    object : KeyguardManager.KeyguardDismissCallback() {
-                                        override fun onDismissSucceeded() {
-                                            stopAndFinish()
-                                        }
-                                        // onDismissCancelled() / onDismissError(): leave the
-                                        // alarm ringing -- the whole point of unlock-required
-                                        // mode is that it must not be defeatable by cancelling.
-                                    },
-                                )
-                            } else {
-                                stopAndFinish()
-                            }
-                        },
-                    )
+                    val fromDisplayName by AlarmForegroundService.ringingFrom.collectAsState()
+                    // However the alarm ends -- this screen, the notification's
+                    // Stop action, the auto-stop timeout -- this screen goes too.
+                    // Also covers being relaunched from a stale notification
+                    // after the process died.
+                    LaunchedEffect(fromDisplayName) {
+                        if (fromDisplayName == null) finish()
+                    }
+                    fromDisplayName?.let { name ->
+                        RingingScreen(
+                            fromDisplayName = name,
+                            onStopRequested = { requireUnlockFirst ->
+                                if (requireUnlockFirst && keyguardManager.isKeyguardLocked) {
+                                    keyguardManager.requestDismissKeyguard(
+                                        this,
+                                        object : KeyguardManager.KeyguardDismissCallback() {
+                                            override fun onDismissSucceeded() {
+                                                stopAndFinish()
+                                            }
+                                            // onDismissCancelled() / onDismissError(): leave the
+                                            // alarm ringing -- the whole point of unlock-required
+                                            // mode is that it must not be defeatable by cancelling.
+                                        },
+                                    )
+                                } else {
+                                    stopAndFinish()
+                                }
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -90,10 +101,6 @@ class RingingActivity : ComponentActivity() {
         }
         ContextCompat.startForegroundService(this, stopIntent)
         finish()
-    }
-
-    companion object {
-        const val EXTRA_FROM_DISPLAY_NAME = "from_display_name"
     }
 }
 
@@ -114,7 +121,11 @@ private fun RingingScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(text = "$fromDisplayName 님이 깨우고 있어요", style = MaterialTheme.typography.headlineMedium)
+        Text(
+            text = "$fromDisplayName 님이 깨우고 있어요",
+            style = MaterialTheme.typography.headlineMedium,
+            textAlign = TextAlign.Center,
+        )
         Button(
             modifier = Modifier.padding(top = 32.dp),
             onClick = { onStopRequested(dismissMode == DismissMode.UNLOCK_REQUIRED) },

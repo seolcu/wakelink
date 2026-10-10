@@ -13,6 +13,15 @@ interface WakeLinkApi {
     @POST("v1/register")
     suspend fun register(@Body body: RegisterRequest): RegisterResponse
 
+    @GET("v1/me")
+    suspend fun getMe(): MeResponse
+
+    @PATCH("v1/me")
+    suspend fun patchMe(@Body body: PatchMeRequest): MeResponse
+
+    @DELETE("v1/me")
+    suspend fun deleteMe(): Response<Unit>
+
     @POST("v1/devices/token")
     suspend fun updateToken(@Body body: UpdateTokenRequest): Response<Unit>
 

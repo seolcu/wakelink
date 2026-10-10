@@ -7,6 +7,7 @@ import androidx.work.WorkerParameters
 import app.wakelink.android.data.TokenStore
 import app.wakelink.android.network.ApiClient
 import app.wakelink.android.network.UpdateTokenRequest
+import app.wakelink.android.network.orThrow
 
 /**
  * Uploads a refreshed FCM token to the backend. Runs as a retrying
@@ -25,7 +26,7 @@ class TokenUploadWorker(context: Context, params: WorkerParameters) : CoroutineW
             return Result.success()
         }
         return try {
-            ApiClient.create(tokenStore).updateToken(UpdateTokenRequest(fcmToken = token))
+            ApiClient.create(tokenStore).updateToken(UpdateTokenRequest(fcmToken = token)).orThrow()
             Result.success()
         } catch (e: Exception) {
             Result.retry()

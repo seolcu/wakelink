@@ -61,3 +61,12 @@ data class TriggerView(
     @Json(name = "send_status") val sendStatus: String,
     @Json(name = "ack_received_at") val ackReceivedAt: Long?,
 )
+
+data class MeResponse(
+    @Json(name = "user_id") val userId: Long,
+    @Json(name = "display_name") val displayName: String,
+)
+
+data class PatchMeRequest(
+    @Json(name = "display_name") val displayName: String,
+)
