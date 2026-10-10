@@ -49,14 +49,16 @@ downgrade the Dockerfile's Go version without also relaxing `go.mod`).
 
 ### Android (`android/`)
 
-Gradle here needs **JDK 17-21** to run (AGP 8.5.2 / Gradle 8.9); a
-system-default JDK 25 will fail. On this machine a working JDK 21 is at
-`~/.local/share/jdks/jdk-21.0.12.1+1` and the SDK at
+Gradle here (AGP 9.4.1 / Gradle 9.8.0, built-in Kotlin -- there is no
+`kotlin-android` plugin) needs a **full JDK 17+** (with `javac`). The
+system `/usr/lib/jvm/java-25-openjdk` on this machine is runtime-only and
+fails with "does not provide the required capabilities: [JAVA_COMPILER]".
+A working JDK 21 is at `~/.local/share/jdks/jdk-21.0.12.1+1` and the SDK at
 `~/.local/share/android-sdk` (both installed outside the repo, under
 `$XDG_DATA_HOME`, not `~/android-sdk` or similar).
 
 ```bash
-export JAVA_HOME=~/.local/share/jdks/jdk-21.0.12.1+1   # adjust if your JDK 17-21 lives elsewhere
+export JAVA_HOME=~/.local/share/jdks/jdk-21.0.12.1+1   # any full JDK 17+ works
 export ANDROID_HOME=~/.local/share/android-sdk
 export PATH="$JAVA_HOME/bin:$PATH"
 cd android

@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.BatteryAlert
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.DeleteForever
@@ -24,7 +25,6 @@ import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.PhoneLocked
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.TouchApp
-import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -213,7 +213,7 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                     },
                 )
                 SettingsRow(
-                    icon = Icons.Rounded.VolumeUp,
+                    icon = Icons.AutoMirrored.Rounded.VolumeUp,
                     title = "울릴 때 알람 볼륨 최대로",
                     supporting = "끝나면 원래 볼륨으로 돌아가요",
                     trailing = {
