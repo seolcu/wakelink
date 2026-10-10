@@ -8,8 +8,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -48,6 +52,9 @@ class MainActivity : ComponentActivity() {
     private var pendingInviteCode by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Edge-to-edge is forced at targetSdk 35 anyway; this also picks
+        // status-bar icon colors that contrast with the (light) background.
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
         val startDestination = if (TokenStore(applicationContext).isRegistered) "contacts" else "register"
@@ -72,7 +79,13 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    NavHost(navController = navController, startDestination = startDestination) {
+                    // targetSdk 35 forces edge-to-edge drawing: keep every screen
+                    // clear of the status/navigation bars and the keyboard.
+                    NavHost(
+                        navController = navController,
+                        startDestination = startDestination,
+                        modifier = Modifier.windowInsetsPadding(WindowInsets.safeDrawing),
+                    ) {
                         composable("register") {
                             RegisterScreen(onRegistered = {
                                 navController.navigate("contacts") {
