@@ -46,5 +46,9 @@ func (s *FirebaseSender) SendWakeTrigger(ctx context.Context, token string, trig
 			Priority: "high",
 		},
 	}
-	return s.client.Send(ctx, msg)
+	id, err := s.client.Send(ctx, msg)
+	if err != nil && (messaging.IsUnregistered(err) || messaging.IsSenderIDMismatch(err)) {
+		return "", fmt.Errorf("%w: %v", ErrUnregistered, err)
+	}
+	return id, err
 }

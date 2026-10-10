@@ -1,10 +1,31 @@
 package api
 
 import (
+	"errors"
 	"net/http"
+	"strings"
+	"unicode/utf8"
 
 	"wakelink/internal/auth"
 )
+
+// maxDisplayNameLength is in runes, not bytes -- most users of the default
+// instance type Korean names, which are 3 bytes per character in UTF-8.
+const maxDisplayNameLength = 40
+
+// normalizeDisplayName trims and validates a user-chosen display name. It's
+// the only thing a contact ever sees about you, so it's shared by
+// registration and PATCH /v1/me.
+func normalizeDisplayName(raw string) (string, error) {
+	name := strings.TrimSpace(raw)
+	if name == "" {
+		return "", errors.New("display_name is required")
+	}
+	if utf8.RuneCountInString(name) > maxDisplayNameLength {
+		return "", errors.New("display_name is too long")
+	}
+	return name, nil
+}
 
 type registerRequest struct {
 	DisplayName string `json:"display_name"`
@@ -26,8 +47,9 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if req.DisplayName == "" {
-		writeError(w, http.StatusBadRequest, "display_name is required")
+	name, err := normalizeDisplayName(req.DisplayName)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -37,7 +59,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := s.DB.CreateUser(r.Context(), req.DisplayName, hash)
+	user, err := s.DB.CreateUser(r.Context(), name, hash)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to create user")
 		return

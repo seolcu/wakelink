@@ -41,3 +41,13 @@ func (d *DB) MarkInviteUsed(ctx context.Context, code string) error {
 	_, err := d.ExecContext(ctx, `UPDATE pairing_invites SET used = 1 WHERE code = ?`, code)
 	return err
 }
+
+// DeleteExpiredInvites purges invites past their expiry (used or not) --
+// they can never be accepted again, so keeping them only grows the table.
+func (d *DB) DeleteExpiredInvites(ctx context.Context, now time.Time) (int64, error) {
+	res, err := d.ExecContext(ctx, `DELETE FROM pairing_invites WHERE expires_at < ?`, now.Unix())
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}

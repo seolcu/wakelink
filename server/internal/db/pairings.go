@@ -119,6 +119,19 @@ func (d *DB) DeletePairing(ctx context.Context, pairingID, requestingUserID int6
 	if requestingUserID != p.UserAID && requestingUserID != p.UserBID {
 		return ErrNotFound
 	}
-	_, err = d.ExecContext(ctx, `DELETE FROM pairings WHERE id = ?`, pairingID)
-	return err
+	// triggers.pairing_id is a plain (non-cascading) foreign key and
+	// foreign_keys is enabled, so the pairing's trigger history has to go
+	// first or the pairing delete itself fails.
+	tx, err := d.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.ExecContext(ctx, `DELETE FROM triggers WHERE pairing_id = ?`, pairingID); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM pairings WHERE id = ?`, pairingID); err != nil {
+		return err
+	}
+	return tx.Commit()
 }

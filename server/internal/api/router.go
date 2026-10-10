@@ -19,6 +19,9 @@ func (s *Server) Router() http.Handler {
 
 	r.Group(func(r chi.Router) {
 		r.Use(s.requireAuth)
+		r.Get("/v1/me", s.handleGetMe)
+		r.Patch("/v1/me", s.handlePatchMe)
+		r.Delete("/v1/me", s.handleDeleteMe)
 		r.Post("/v1/devices/token", s.handleUpdateToken)
 		r.Post("/v1/invites", s.handleCreateInvite)
 		r.Post("/v1/invites/accept", s.handleAcceptInvite)

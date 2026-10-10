@@ -3,7 +3,16 @@
 // never need real Firebase credentials or network access.
 package fcm
 
-import "context"
+import (
+	"context"
+	"errors"
+)
+
+// ErrUnregistered is returned (wrapped) by a Sender when the provider says
+// the device token is no longer valid -- the app was uninstalled, or the
+// token rotated and the new one never reached us. Callers should forget
+// the token rather than keep retrying it.
+var ErrUnregistered = errors.New("fcm: device token is no longer registered")
 
 type Sender interface {
 	// SendWakeTrigger sends a high-priority, data-only push to token,

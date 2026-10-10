@@ -3,12 +3,14 @@ package api
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"wakelink/internal/db"
+	"wakelink/internal/fcm"
 	"wakelink/internal/ratelimit"
 )
 
@@ -77,6 +79,12 @@ func (s *Server) handleTrigger(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 	msgID, sendErr := s.FCM.SendWakeTrigger(ctx, recipient.FCMToken.String, trig.ID, user.DisplayName)
+	if errors.Is(sendErr, fcm.ErrUnregistered) {
+		_ = s.DB.UpdateTriggerSendResult(r.Context(), trig.ID, "fcm_error", "", sendErr.Error())
+		_ = s.DB.ClearFCMToken(r.Context(), recipient.ID)
+		writeError(w, http.StatusUnprocessableEntity, "recipient device is not registered for push")
+		return
+	}
 	if sendErr != nil {
 		_ = s.DB.UpdateTriggerSendResult(r.Context(), trig.ID, "fcm_error", "", sendErr.Error())
 		writeError(w, http.StatusBadGateway, "failed to deliver push")

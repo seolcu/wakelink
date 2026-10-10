@@ -67,6 +67,10 @@ func main() {
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
+	cleanupCtx, stopCleanup := context.WithCancel(context.Background())
+	defer stopCleanup()
+	go purgeExpiredInvites(cleanupCtx, database, time.Hour)
+
 	go func() {
 		log.Printf("wakelinkd listening on %s", listenAddr)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -79,10 +83,30 @@ func main() {
 	<-stop
 
 	log.Println("shutting down...")
+	stopCleanup()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := httpServer.Shutdown(ctx); err != nil {
 		log.Printf("shutdown error: %v", err)
+	}
+}
+
+// purgeExpiredInvites deletes dead invite codes once at startup and then
+// every interval, until ctx is cancelled.
+func purgeExpiredInvites(ctx context.Context, database *db.DB, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		if n, err := database.DeleteExpiredInvites(ctx, time.Now()); err != nil {
+			log.Printf("purge expired invites: %v", err)
+		} else if n > 0 {
+			log.Printf("purged %d expired invite(s)", n)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
 	}
 }
 
