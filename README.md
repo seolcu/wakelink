@@ -40,3 +40,7 @@ persistent notification -- never hidden.
 ## License
 
 MIT -- see [`LICENSE`](LICENSE).
+
+The Android app bundles the [Pretendard](https://github.com/orioncactus/pretendard)
+font (SIL Open Font License 1.1) -- see
+[`android/third_party/pretendard/LICENSE.txt`](android/third_party/pretendard/LICENSE.txt).

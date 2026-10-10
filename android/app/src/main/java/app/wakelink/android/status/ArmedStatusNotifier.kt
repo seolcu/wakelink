@@ -18,7 +18,7 @@ object ArmedStatusNotifier {
 
     fun update(context: Context, armed: Boolean) {
         val notification = NotificationCompat.Builder(context, WakeLinkApplication.CHANNEL_ARMED)
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setSmallIcon(R.drawable.ic_stat_wakelink)
             .setContentTitle(
                 context.getString(
                     if (armed) R.string.armed_notification_title_on else R.string.armed_notification_title_off

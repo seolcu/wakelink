@@ -145,7 +145,7 @@ class AlarmForegroundService : Service() {
         )
 
         return NotificationCompat.Builder(this, WakeLinkApplication.CHANNEL_ALARM)
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setSmallIcon(R.drawable.ic_stat_wakelink)
             .setContentTitle(getString(R.string.alarm_notification_title, fromDisplayName))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
@@ -159,7 +159,7 @@ class AlarmForegroundService : Service() {
 
     private fun buildMinimalNotification(): Notification =
         NotificationCompat.Builder(this, WakeLinkApplication.CHANNEL_ALARM)
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setSmallIcon(R.drawable.ic_stat_wakelink)
             .setContentTitle(getString(R.string.alarm_stop_action))
             .setSilent(true)
             .build()

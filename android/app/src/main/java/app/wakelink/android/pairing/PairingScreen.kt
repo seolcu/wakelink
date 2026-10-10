@@ -2,20 +2,41 @@ package app.wakelink.android.pairing
 
 import android.content.Intent
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Button
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -24,17 +45,22 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.wakelink.android.data.TokenStore
 import app.wakelink.android.network.AcceptInviteRequest
 import app.wakelink.android.network.ApiClient
 import app.wakelink.android.network.CreateInviteResponse
 import app.wakelink.android.network.toUserMessage
+import app.wakelink.android.ui.components.StatusKind
+import app.wakelink.android.ui.components.StatusPill
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -45,6 +71,7 @@ import kotlinx.coroutines.launch
  * arriving via a wakelink://invite link ([initialCode]) is only pre-filled;
  * the user still has to press "connect".
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PairingScreen(initialCode: String?, onDone: () -> Unit) {
     val context = LocalContext.current
@@ -53,11 +80,13 @@ fun PairingScreen(initialCode: String?, onDone: () -> Unit) {
     val api = remember { ApiClient.create(TokenStore(context)) }
 
     var invite by remember { mutableStateOf<CreateInviteResponse?>(null) }
+    var issuedAt by remember { mutableLongStateOf(0L) }
     var nowSeconds by remember { mutableLongStateOf(System.currentTimeMillis() / 1000) }
     var enteredCode by remember { mutableStateOf(initialCode?.let(::normalizeInviteCode) ?: "") }
     var creating by remember { mutableStateOf(false) }
     var accepting by remember { mutableStateOf(false) }
-    var status by remember { mutableStateOf<String?>(null) }
+    var createError by remember { mutableStateOf<String?>(null) }
+    var acceptError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(invite) {
         val expiresAt = invite?.expiresAt ?: return@LaunchedEffect
@@ -68,108 +97,207 @@ fun PairingScreen(initialCode: String?, onDone: () -> Unit) {
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState())) {
-        TextButton(onClick = onDone) { Text("닫기") }
-        Text("연락처 추가하기", style = MaterialTheme.typography.titleLarge)
-        Text(
-            "한 사람이 초대 코드를 만들고, 다른 사람이 그 코드를 입력하면 연결돼요. " +
-                "연결되면 서로 깨울 수 있고, 각자 언제든 끄거나 연결을 끊을 수 있어요.",
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(top = 8.dp),
-        )
+    fun createInvite() {
+        creating = true
+        createError = null
+        scope.launch {
+            try {
+                invite = api.createInvite()
+                issuedAt = System.currentTimeMillis() / 1000
+                nowSeconds = issuedAt
+            } catch (e: Exception) {
+                createError = "코드 생성 실패: ${e.toUserMessage()}"
+            } finally {
+                creating = false
+            }
+        }
+    }
 
-        Text("내 초대 코드 보내기", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 24.dp))
-        val current = invite
-        val remaining = current?.let { it.expiresAt - nowSeconds } ?: 0
-        if (current != null && remaining > 0) {
-            Text(
-                current.pairingCode,
-                style = MaterialTheme.typography.displaySmall.copy(fontFamily = FontFamily.Monospace),
-                modifier = Modifier.padding(top = 8.dp),
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            TopAppBar(
+                title = { Text("연락처 추가") },
+                navigationIcon = {
+                    IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "뒤로") }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
-            Text("${formatRemaining(remaining)} 후 만료", style = MaterialTheme.typography.bodySmall)
-            Row(modifier = Modifier.padding(top = 8.dp)) {
-                Button(onClick = {
-                    val send = Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, inviteShareText(current.pairingCode, current.deepLink))
-                    }
-                    context.startActivity(Intent.createChooser(send, "초대 코드 보내기"))
-                }) { Text("공유") }
-                OutlinedButton(
-                    modifier = Modifier.padding(start = 8.dp),
-                    onClick = {
-                        clipboard.setText(AnnotatedString(current.pairingCode))
-                        Toast.makeText(context, "코드를 복사했어요", Toast.LENGTH_SHORT).show()
-                    },
-                ) { Text("복사") }
-            }
-        } else {
-            if (current != null) {
-                Text("코드가 만료되었어요. 새로 만들어 주세요.", modifier = Modifier.padding(top = 8.dp))
-            }
-            Button(
-                enabled = !creating,
-                modifier = Modifier.padding(top = 8.dp),
-                onClick = {
-                    creating = true
-                    status = null
-                    scope.launch {
-                        try {
-                            invite = api.createInvite()
-                            nowSeconds = System.currentTimeMillis() / 1000
-                        } catch (e: Exception) {
-                            status = "코드 생성 실패: ${e.toUserMessage()}"
-                        } finally {
-                            creating = false
+        },
+    ) { innerPadding ->
+        Column(
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(start = 16.dp, end = 16.dp, bottom = 32.dp),
+        ) {
+            Text(
+                "한 사람이 코드를 만들고 다른 사람이 입력하면 연결돼요. 연결되면 서로 깨울 수 있고, 언제든 끊을 수 있어요.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 4.dp),
+            )
+
+            PairingSection(title = "내 초대 코드 보내기", step = "A") {
+                val current = invite
+                val remaining = current?.let { it.expiresAt - nowSeconds } ?: 0
+                if (current != null && remaining > 0) {
+                    CodeBoxes(current.pairingCode)
+                    val total = (current.expiresAt - issuedAt).coerceAtLeast(1)
+                    LinearProgressIndicator(
+                        progress = { remaining.toFloat() / total },
+                        color = MaterialTheme.colorScheme.secondary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                    )
+                    Text(
+                        "${formatRemaining(remaining)} 후 만료",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        Button(
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                val send = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, inviteShareText(current.pairingCode, current.deepLink))
+                                }
+                                context.startActivity(Intent.createChooser(send, "초대 코드 보내기"))
+                            },
+                        ) {
+                            Icon(Icons.Rounded.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.size(8.dp))
+                            Text("공유")
+                        }
+                        OutlinedButton(
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                clipboard.setText(AnnotatedString(current.pairingCode))
+                                Toast.makeText(context, "코드를 복사했어요", Toast.LENGTH_SHORT).show()
+                            },
+                        ) {
+                            Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.size(8.dp))
+                            Text("복사")
                         }
                     }
-                },
-            ) {
-                Text(if (current == null) "초대 코드 만들기" else "새 코드 만들기")
-            }
-        }
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
-
-        Text("받은 코드 입력하기", style = MaterialTheme.typography.titleMedium)
-        if (initialCode != null) {
-            Text(
-                "초대 링크로 받은 코드예요. 아는 사람이 보낸 게 맞는지 확인한 뒤 연결해 주세요.",
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-        }
-        OutlinedTextField(
-            value = enteredCode,
-            onValueChange = { enteredCode = normalizeInviteCode(it) },
-            singleLine = true,
-            placeholder = { Text("예: AB23CD45") },
-            textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = FontFamily.Monospace),
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-        )
-        Button(
-            enabled = enteredCode.isNotBlank() && !accepting,
-            modifier = Modifier.padding(top = 16.dp),
-            onClick = {
-                accepting = true
-                status = null
-                scope.launch {
-                    try {
-                        val res = api.acceptInvite(AcceptInviteRequest(pairingCode = enteredCode))
-                        Toast.makeText(context, "${res.pairedWithName}님과 연결되었어요", Toast.LENGTH_SHORT).show()
-                        onDone()
-                    } catch (e: Exception) {
-                        status = "연결 실패: ${e.toUserMessage()}"
-                    } finally {
-                        accepting = false
+                } else {
+                    Text(
+                        if (current != null) "코드가 만료되었어요. 새로 만들어 주세요." else "코드는 10분 동안, 한 번만 쓸 수 있어요.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Button(enabled = !creating, onClick = ::createInvite, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+                        if (creating) {
+                            CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+                        } else {
+                            Text(if (current == null) "초대 코드 만들기" else "새 코드 만들기")
+                        }
                     }
                 }
-            },
-        ) {
-            Text("연결하기")
-        }
+                createError?.let { StatusPill(StatusKind.ERROR, it, Modifier.fillMaxWidth()) }
+            }
 
-        status?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 16.dp)) }
+            PairingSection(title = "받은 코드 입력하기", step = "B") {
+                if (initialCode != null) {
+                    StatusPill(
+                        StatusKind.INFO,
+                        "초대 링크로 받은 코드예요. 아는 사람이 보낸 게 맞는지 확인한 뒤 연결해 주세요.",
+                        Modifier.fillMaxWidth(),
+                    )
+                }
+                OutlinedTextField(
+                    value = enteredCode,
+                    onValueChange = { enteredCode = normalizeInviteCode(it) },
+                    singleLine = true,
+                    label = { Text("초대 코드") },
+                    placeholder = { Text("예: AB23CD45") },
+                    leadingIcon = { Icon(Icons.Rounded.Link, contentDescription = null) },
+                    textStyle = MaterialTheme.typography.titleMedium.copy(fontFamily = FontFamily.Monospace, letterSpacing = 2.sp),
+                    isError = acceptError != null,
+                    supportingText = acceptError?.let { { Text(it) } },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Button(
+                    enabled = enteredCode.isNotBlank() && !accepting,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary,
+                        contentColor = MaterialTheme.colorScheme.onSecondary,
+                    ),
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    onClick = {
+                        accepting = true
+                        acceptError = null
+                        scope.launch {
+                            try {
+                                val res = api.acceptInvite(AcceptInviteRequest(pairingCode = enteredCode))
+                                Toast.makeText(context, "${res.pairedWithName}님과 연결되었어요", Toast.LENGTH_SHORT).show()
+                                onDone()
+                            } catch (e: Exception) {
+                                acceptError = e.toUserMessage()
+                            } finally {
+                                accepting = false
+                            }
+                        }
+                    },
+                ) {
+                    if (accepting) {
+                        CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+                    } else {
+                        Text("연결하기")
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** A card for one side of the two-step exchange, labelled A (give a code) or B (enter one). */
+@Composable
+private fun PairingSection(title: String, step: String, content: @Composable () -> Unit) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = MaterialTheme.shapes.large,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(28.dp)
+                        .background(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.shapes.small),
+                ) {
+                    Text(step, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                }
+                Text(title, style = MaterialTheme.typography.titleMedium)
+            }
+            content()
+        }
+    }
+}
+
+/** The invite code, one character per box, so it's easy to read aloud or copy by eye. */
+@Composable
+private fun CodeBoxes(code: String) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+        code.forEach { ch ->
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .weight(1f)
+                    .aspectRatio(0.78f)
+                    .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.small),
+            ) {
+                Text(
+                    ch.toString(),
+                    style = MaterialTheme.typography.headlineMedium.copy(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
     }
 }

@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.WakeLink" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Window background matches the Compose theme's background token
+         (ui/theme/Color.kt) so there's no flash of a different color while
+         the first frame draws. -->
+    <style name="Theme.WakeLink" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
 
-    <!-- Ringing screen theme: shows over the lock screen and keeps the
-         screen on for as long as the activity is displayed. -->
-    <style name="Theme.WakeLink.Ringing" parent="android:Theme.Material.Light.NoActionBar">
+    <!-- Ringing screen is always dark (night sky), regardless of the system theme. -->
+    <style name="Theme.WakeLink.Ringing" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowFullscreen">true</item>
+        <item name="android:windowBackground">@color/night_deep</item>
     </style>
 </resources>

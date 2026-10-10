@@ -38,6 +38,7 @@ import app.wakelink.android.pairing.RegisterScreen
 import app.wakelink.android.pairing.parseInviteCode
 import app.wakelink.android.settings.SettingsScreen
 import app.wakelink.android.status.ArmedStatusNotifier
+import app.wakelink.android.ui.theme.WakeLinkTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -53,7 +54,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Edge-to-edge is forced at targetSdk 35 anyway; this also picks
-        // status-bar icon colors that contrast with the (light) background.
+        // status-bar icon colors that contrast with the light/dark background.
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
@@ -61,8 +62,10 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) pendingInviteCode = parseInviteCode(intent?.dataString)
 
         setContent {
-            MaterialTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
+            WakeLinkTheme {
+                // Background (not surface) color, so the status-bar strip
+                // above each screen matches the screen itself.
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     RequestNotificationPermission()
 
                     val navController = rememberNavController()

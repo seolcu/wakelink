@@ -5,21 +5,41 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.BatteryAlert
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.DeleteForever
+import androidx.compose.material.icons.rounded.DoNotDisturbOn
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.PhoneLocked
+import androidx.compose.material.icons.rounded.PowerSettingsNew
+import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material.icons.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,6 +49,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -44,9 +65,16 @@ import app.wakelink.android.pairing.MAX_DISPLAY_NAME_LENGTH
 import app.wakelink.android.status.ArmedStatusNotifier
 import app.wakelink.android.status.DeviceReadiness
 import app.wakelink.android.ui.OnResume
+import app.wakelink.android.ui.components.Avatar
+import app.wakelink.android.ui.components.SectionCard
+import app.wakelink.android.ui.components.SettingsRow
+import app.wakelink.android.ui.components.StatusKind
+import app.wakelink.android.ui.components.StatusPill
+import app.wakelink.android.ui.theme.WakeTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
     val context = LocalContext.current
@@ -86,89 +114,156 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
         readiness = DeviceReadiness.check(context)
     }
 
-    Column(modifier = Modifier.fillMaxWidth().padding(24.dp).verticalScroll(rememberScrollState())) {
-        TextButton(onClick = onDone) { Text("닫기") }
-
-        SectionTitle("계정")
-        Text("내 이름: ${myName ?: "…"}", modifier = Modifier.padding(top = 8.dp))
-        accountError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        Row(modifier = Modifier.padding(top = 8.dp)) {
-            OutlinedButton(enabled = myName != null, onClick = { renaming = true }) { Text("이름 변경") }
-            TextButton(modifier = Modifier.padding(start = 8.dp), onClick = { confirmDelete = true }) {
-                Text("계정 삭제", color = MaterialTheme.colorScheme.error)
-            }
-        }
-
-        SectionTitle("알람")
-        SettingSwitch("활성화 (끄면 아무도 나를 깨울 수 없어요)", armed) { value ->
-            armed = value
-            scope.launch {
-                settings.setArmed(value)
-                ArmedStatusNotifier.update(context, value)
-            }
-        }
-
-        SettingSwitch("방해 금지 '완전 무음'도 뚫기", dndBypass) { value ->
-            if (value && !dndAccessGranted) {
-                context.startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
-            }
-            dndBypass = value
-            scope.launch { settings.setDndBypassEnabled(value) }
-        }
-        if (dndBypass && !dndAccessGranted) {
-            Text(
-                "설정 > 방해 금지 액세스 권한에서 WakeLink를 허용해야 동작합니다",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            TopAppBar(
+                title = { Text("설정") },
+                navigationIcon = {
+                    IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "뒤로") }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
-        }
-
-        SettingSwitch(
-            "탭하면 바로 꺼짐 (끄면 잠금 해제해야 꺼짐)",
-            dismissMode == DismissMode.TAP_TO_DISMISS,
-        ) { tapToDismiss ->
-            val mode = if (tapToDismiss) DismissMode.TAP_TO_DISMISS else DismissMode.UNLOCK_REQUIRED
-            dismissMode = mode
-            scope.launch { settings.setDismissMode(mode) }
-        }
-
-        SettingSwitch("울릴 때 알람 볼륨 최대로", maxVolume) { value ->
-            maxVolume = value
-            scope.launch { settings.setMaxVolumeOnRing(value) }
-        }
-
-        Button(
-            modifier = Modifier.padding(top = 16.dp),
-            onClick = {
-                val intent = Intent(context, AlarmForegroundService::class.java).apply {
-                    putExtra(AlarmForegroundService.EXTRA_TRIGGER_ID, -1L)
-                    putExtra(AlarmForegroundService.EXTRA_FROM_DISPLAY_NAME, "테스트")
-                }
-                ContextCompat.startForegroundService(context, intent)
-            },
+        },
+    ) { innerPadding ->
+        Column(
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(start = 16.dp, end = 16.dp, bottom = 32.dp),
         ) {
-            Text("테스트 알람 울리기")
-        }
-
-        SectionTitle("기기 준비 상태")
-        readiness?.let { r ->
-            ReadinessRow("알림 허용", r.notificationsEnabled) {
-                context.startActivity(
-                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            SectionCard("계정") {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                ) {
+                    Avatar(myName ?: "?", size = 48.dp)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(myName ?: "불러오는 중…", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "연결된 사람에게 보이는 이름",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    IconButton(enabled = myName != null, onClick = { renaming = true }) {
+                        Icon(Icons.Rounded.Edit, contentDescription = "이름 변경")
+                    }
+                }
+                accountError?.let {
+                    StatusPill(StatusKind.ERROR, it, Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp))
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                SettingsRow(
+                    icon = Icons.Rounded.DeleteForever,
+                    title = "계정 삭제",
+                    supporting = "모든 연결과 기록이 지워져요",
+                    iconTint = MaterialTheme.colorScheme.error,
+                    titleColor = MaterialTheme.colorScheme.error,
+                    onClick = { confirmDelete = true },
                 )
             }
-            ReadinessRow("잠금 화면에 전체 화면 알람 표시", r.fullScreenIntentAllowed) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    context.startActivity(
-                        Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:${context.packageName}"))
-                    )
+
+            SectionCard("알람 받기") {
+                SettingsRow(
+                    icon = Icons.Rounded.PowerSettingsNew,
+                    title = "활성화",
+                    supporting = if (armed) "연결된 사람이 나를 깨울 수 있어요" else "꺼져 있어 아무도 나를 깨울 수 없어요",
+                    trailing = {
+                        Switch(checked = armed, onCheckedChange = { value ->
+                            armed = value
+                            scope.launch {
+                                settings.setArmed(value)
+                                ArmedStatusNotifier.update(context, value)
+                            }
+                        })
+                    },
+                )
+                SettingsRow(
+                    icon = Icons.Rounded.DoNotDisturbOn,
+                    title = "방해 금지 '완전 무음'도 뚫기",
+                    supporting = if (dndBypass && !dndAccessGranted) {
+                        "방해 금지 액세스 권한에서 WakeLink를 허용해야 동작해요"
+                    } else {
+                        "울리는 동안만 바꾸고, 끝나면 되돌려요"
+                    },
+                    trailing = {
+                        Switch(checked = dndBypass, onCheckedChange = { value ->
+                            if (value && !dndAccessGranted) {
+                                context.startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+                            }
+                            dndBypass = value
+                            scope.launch { settings.setDndBypassEnabled(value) }
+                        })
+                    },
+                )
+                SettingsRow(
+                    icon = Icons.Rounded.TouchApp,
+                    title = "탭하면 바로 끄기",
+                    supporting = if (dismissMode == DismissMode.TAP_TO_DISMISS) "잠금 해제 없이 버튼만 누르면 꺼져요" else "끄려면 잠금을 해제해야 해요",
+                    trailing = {
+                        Switch(checked = dismissMode == DismissMode.TAP_TO_DISMISS, onCheckedChange = { tapToDismiss ->
+                            val mode = if (tapToDismiss) DismissMode.TAP_TO_DISMISS else DismissMode.UNLOCK_REQUIRED
+                            dismissMode = mode
+                            scope.launch { settings.setDismissMode(mode) }
+                        })
+                    },
+                )
+                SettingsRow(
+                    icon = Icons.Rounded.VolumeUp,
+                    title = "울릴 때 알람 볼륨 최대로",
+                    supporting = "끝나면 원래 볼륨으로 돌아가요",
+                    trailing = {
+                        Switch(checked = maxVolume, onCheckedChange = { value ->
+                            maxVolume = value
+                            scope.launch { settings.setMaxVolumeOnRing(value) }
+                        })
+                    },
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    onClick = {
+                        val intent = Intent(context, AlarmForegroundService::class.java).apply {
+                            putExtra(AlarmForegroundService.EXTRA_TRIGGER_ID, -1L)
+                            putExtra(AlarmForegroundService.EXTRA_FROM_DISPLAY_NAME, "테스트")
+                        }
+                        ContextCompat.startForegroundService(context, intent)
+                    },
+                ) {
+                    Text("테스트 알람 울리기")
                 }
             }
-            ReadinessRow("배터리 최적화 제외 (자는 동안에도 바로 받기)", r.ignoringBatteryOptimizations) {
-                context.startActivity(
-                    Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${context.packageName}"))
-                )
+
+            readiness?.let { r ->
+                SectionCard("기기 준비 상태") {
+                    ReadinessRow(
+                        Icons.Rounded.NotificationsActive, "알림 허용", "꺼져 있으면 알람이 표시되지 않아요", r.notificationsEnabled,
+                    ) {
+                        context.startActivity(
+                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                        )
+                    }
+                    ReadinessRow(
+                        Icons.Rounded.PhoneLocked, "잠금 화면 전체 화면 알람", "잠긴 폰에서 알람 화면을 바로 띄워요", r.fullScreenIntentAllowed,
+                    ) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                            context.startActivity(
+                                Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:${context.packageName}"))
+                            )
+                        }
+                    }
+                    ReadinessRow(
+                        Icons.Rounded.BatteryAlert, "배터리 최적화 제외", "자는 동안에도 깨우기를 바로 받아요", r.ignoringBatteryOptimizations,
+                    ) {
+                        context.startActivity(
+                            Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${context.packageName}"))
+                        )
+                    }
+                }
             }
         }
     }
@@ -178,16 +273,16 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
         var renameError by remember { mutableStateOf<String?>(null) }
         AlertDialog(
             onDismissRequest = { renaming = false },
+            icon = { Icon(Icons.Rounded.Edit, contentDescription = null) },
             title = { Text("이름 변경") },
             text = {
-                Column {
-                    OutlinedTextField(
-                        value = draft,
-                        onValueChange = { draft = it.take(MAX_DISPLAY_NAME_LENGTH) },
-                        singleLine = true,
-                    )
-                    renameError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                }
+                OutlinedTextField(
+                    value = draft,
+                    onValueChange = { draft = it.take(MAX_DISPLAY_NAME_LENGTH) },
+                    singleLine = true,
+                    isError = renameError != null,
+                    supportingText = { Text(renameError ?: "${draft.length}/$MAX_DISPLAY_NAME_LENGTH") },
+                )
             },
             confirmButton = {
                 TextButton(enabled = draft.isNotBlank(), onClick = {
@@ -208,6 +303,7 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
+            icon = { Icon(Icons.Rounded.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
             title = { Text("계정을 삭제할까요?") },
             text = { Text("모든 연결과 기록이 삭제되고 되돌릴 수 없어요. 다시 쓰려면 처음부터 등록하고 초대 코드를 다시 주고받아야 해요.") },
             confirmButton = {
@@ -230,33 +326,28 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
 }
 
 @Composable
-private fun SectionTitle(text: String) {
-    HorizontalDivider(modifier = Modifier.padding(top = 24.dp, bottom = 8.dp))
-    Text(text, style = MaterialTheme.typography.titleMedium)
-}
-
-@Composable
-private fun SettingSwitch(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-    ) {
-        Text(label, modifier = Modifier.weight(1f).padding(end = 8.dp))
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
-    }
-}
-
-@Composable
-private fun ReadinessRow(label: String, ok: Boolean, onFix: () -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-    ) {
-        Text(
-            "${if (ok) "✓" else "✗"} $label",
-            color = if (ok) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error,
-            modifier = Modifier.weight(1f),
-        )
-        if (!ok) TextButton(onClick = onFix) { Text("설정") }
-    }
+private fun ReadinessRow(
+    icon: ImageVector,
+    title: String,
+    supporting: String,
+    ok: Boolean,
+    onFix: () -> Unit,
+) {
+    SettingsRow(
+        icon = icon,
+        title = title,
+        supporting = supporting,
+        iconTint = if (ok) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+        onClick = if (ok) null else onFix,
+        trailing = {
+            if (ok) {
+                Icon(Icons.Rounded.CheckCircle, contentDescription = "완료", tint = WakeTheme.status.success)
+            } else {
+                TextButton(onClick = onFix) {
+                    Icon(Icons.Rounded.WarningAmber, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
+                    Text("설정")
+                }
+            }
+        },
+    )
 }
