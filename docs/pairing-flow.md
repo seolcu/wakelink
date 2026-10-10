@@ -33,6 +33,13 @@ Notes:
   revoked by the user who owns that direction (`PATCH /v1/pairings/{id}`),
   and either side can delete the pairing outright
   (`DELETE /v1/pairings/{id}`) at any time.
+- Instead of typing the code, A can share a `wakelink://invite/CODE` link
+  from the app's share sheet. Opening it only pre-fills the code on B's
+  pairing screen -- B still has to press "connect", so the link alone
+  never pairs anyone.
+- Deleting a pairing also deletes its trigger history. Deleting an
+  account (`DELETE /v1/me`) deletes every pairing it was part of, so no
+  former contact can wake that device again.
 - Nothing here lets one side see the other's location, messages, contacts,
   or any data beyond: display name, whether they can currently wake you,
   and the timestamps of past triggers.

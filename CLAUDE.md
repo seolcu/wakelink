@@ -23,6 +23,10 @@ reference only.
 
 ### Backend (`server/`)
 
+Go isn't on the system `PATH` on this machine; a Go toolchain (1.26,
+satisfies `go 1.25.0`) lives at `~/.local/share/go`:
+`export PATH=~/.local/share/go/bin:$PATH`.
+
 ```bash
 cd server
 go build ./...
@@ -62,13 +66,16 @@ cd android
 cp app/google-services.json.example app/google-services.json
 
 ./gradlew lintDebug
+./gradlew testDebugUnitTest   # single class: ./gradlew testDebugUnitTest --tests '*InviteLinkTest'
 ./gradlew assembleDebug
 ./gradlew assembleRelease   # only if keystore/wakelink-upload.properties exists (gitignored, not committed) -- otherwise skip; CI never runs this target
 ```
 
-There is no Android unit/instrumented test suite yet -- `lintDebug` +
-`assembleDebug` are the only automated checks (see
-`.github/workflows/android.yml`).
+`app/src/test` holds plain-JVM unit tests for the pure logic (invite-link
+parsing, API error mapping, ack-status judgement) -- keep that logic free
+of Android framework types so it stays testable there. There is no
+instrumented (on-device) test suite; anything touching audio, DND,
+notifications or the lock screen has to be checked on a real phone.
 
 To point a local build at your own backend instead of the deployed
 default, override `DEFAULT_SERVER_BASE_URL` in `app/build.gradle.kts`'s
@@ -80,7 +87,7 @@ self-hosting work.
 
 `.github/workflows/backend.yml` and `android.yml` run on every push
 touching their respective directories: backend does
-build+vet+test+gofmt; android does lint+assembleDebug (using the
+build+vet+test+gofmt; android does lint+unit tests+assembleDebug (using the
 `.example` placeholder Firebase config, never a real one).
 
 ## Architecture
@@ -116,8 +123,20 @@ receiver's app --POST /v1/triggers/{id}/ack--> wakelinkd
 ```
 
 The sender's UI must not claim success before the `ack` arrives --
-"sent" and "actually rang" are different things (see `ContactsScreen`'s
-trigger status handling and `handleAckTrigger` in `server/internal/api/trigger.go`).
+"sent" and "actually rang" are different things. `ContactsScreen` polls
+`GET /v1/triggers` after a trigger until the ack shows up (judged by
+`ackCheckFor` in `contacts/TriggerAck.kt`), and the receiver only acks
+once `MediaPlayer` is actually playing (see `handleAckTrigger` in
+`server/internal/api/trigger.go`). If FCM reports the recipient's token
+as unregistered, the server clears it so later triggers fail fast with 422.
+
+`AlarmForegroundService.ringingFrom` (a `StateFlow`) is the single
+"is it ringing, and who for" signal; `RingingActivity` closes itself when
+it goes null, whichever way the alarm ended (Stop action, 5-minute
+auto-stop, disarmed). The DND startup self-heal runs in
+`WakeLinkApplication.onCreate` as well as on boot
+(`data/DndRestore.kt`), and the service joins it before applying a new
+override so the two can't race.
 
 ### Pairing / consent model (`docs/pairing-flow.md` has the full sequence)
 
@@ -130,6 +149,18 @@ table) so either side can revoke just their own outbound permission, or
 delete the pairing outright, independently. `db.Pairing.CanWake()` is the
 single source of truth for permission checks -- `handleTrigger` in
 `server/internal/api/trigger.go` is the only caller that matters.
+
+A `wakelink://invite/CODE` link only *pre-fills* the code on the pairing
+screen (`MainActivity.pendingInviteCode`); never make it auto-accept, or a
+link alone could pair someone without their explicit action.
+
+`/v1/me` (GET/PATCH/DELETE) covers the account: display name (validated by
+`normalizeDisplayName`, max 40 runes -- mirrored by
+`MAX_DISPLAY_NAME_LENGTH` in the app) and full account deletion.
+
+None of the foreign keys cascade and `foreign_keys` is on, so any delete
+must remove children first, in a transaction (`DeletePairing`,
+`DeleteUser`). Expired invites are purged hourly by `main.go`.
 
 ### Backend package layout
 
