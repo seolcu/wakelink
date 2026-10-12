@@ -20,4 +20,7 @@ type Server struct {
 	Metrics   *metrics.Counters
 	Version   string
 	StartedAt time.Time
+	// DownloadURL is where GET /download redirects (the latest APK); empty
+	// disables the route.
+	DownloadURL string
 }

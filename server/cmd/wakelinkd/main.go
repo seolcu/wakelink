@@ -47,6 +47,10 @@ func main() {
 	}
 	fcmServiceAccountPath := os.Getenv("FCM_SERVICE_ACCOUNT_PATH")
 	fcmMock := os.Getenv("FCM_MOCK") == "true"
+	downloadURL := getenv("APK_DOWNLOAD_URL", "https://github.com/seolcu/wakelink/releases/latest/download/wakelink.apk")
+	if downloadURL == "-" {
+		downloadURL = ""
+	}
 
 	database, err := db.Open(dbPath)
 	if err != nil {
@@ -78,10 +82,11 @@ func main() {
 			Cooldown: time.Duration(cooldownSec) * time.Second,
 			DailyCap: dailyCap,
 		},
-		InviteTTL: time.Duration(inviteTTLSec) * time.Second,
-		Metrics:   &metrics.Counters{},
-		Version:   "dev",
-		StartedAt: time.Now(),
+		InviteTTL:   time.Duration(inviteTTLSec) * time.Second,
+		Metrics:     &metrics.Counters{},
+		Version:     "dev",
+		StartedAt:   time.Now(),
+		DownloadURL: downloadURL,
 	}
 
 	httpServer := &http.Server{

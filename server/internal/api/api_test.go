@@ -656,3 +656,16 @@ func TestRotateApiKeyInvalidatesOldKey(t *testing.T) {
 		t.Fatalf("expected new key to work, got status %d body %s", rec.Code, rec.Body.String())
 	}
 }
+
+func TestDownloadRedirect(t *testing.T) {
+	s, _ := newTestServer(t)
+	if rec := doJSON(t, s.Router(), http.MethodGet, "/download", "", nil); rec.Code != http.StatusNotFound {
+		t.Fatalf("download without DownloadURL: expected 404, got %d", rec.Code)
+	}
+
+	s.DownloadURL = "https://example.com/wakelink.apk"
+	rec := doJSON(t, s.Router(), http.MethodGet, "/download", "", nil)
+	if rec.Code != http.StatusFound || rec.Header().Get("Location") != s.DownloadURL {
+		t.Fatalf("expected 302 to %s, got %d Location=%q", s.DownloadURL, rec.Code, rec.Header().Get("Location"))
+	}
+}

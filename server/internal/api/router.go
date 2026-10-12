@@ -16,6 +16,9 @@ func (s *Server) Router() http.Handler {
 
 	r.Get("/healthz", s.handleHealthz)
 	r.Get("/version", s.handleVersion)
+	if s.DownloadURL != "" {
+		r.Get("/download", s.handleDownload)
+	}
 	r.Post("/v1/register", s.handleRegister)
 
 	r.Group(func(r chi.Router) {

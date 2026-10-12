@@ -24,3 +24,10 @@ func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
 		"triggers_acked":  s.Metrics.TriggersAcked.Load(),
 	})
 }
+
+// handleDownload gives the app a short, stable link to share ("install
+// WakeLink: https://<server>/download") that always points at the newest
+// release, wherever the APK itself is hosted.
+func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, s.DownloadURL, http.StatusFound)
+}
