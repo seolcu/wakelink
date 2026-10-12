@@ -30,6 +30,8 @@ class SettingsRepository(private val context: Context) {
         val MAX_VOLUME_ON_RING = booleanPreferencesKey("max_volume_on_ring")
         val DND_OVERRIDE_ACTIVE = booleanPreferencesKey("dnd_override_active")
         val DND_PRIOR_FILTER = intPreferencesKey("dnd_prior_filter")
+        val AUTO_UPDATE_CHECK = booleanPreferencesKey("auto_update_check")
+        val SKIPPED_UPDATE_VERSION = stringPreferencesKey("skipped_update_version")
     }
 
     val armed: Flow<Boolean> = context.dataStore.data.map { it[Keys.ARMED] ?: true }
@@ -41,11 +43,17 @@ class SettingsRepository(private val context: Context) {
         }
     }
     val maxVolumeOnRing: Flow<Boolean> = context.dataStore.data.map { it[Keys.MAX_VOLUME_ON_RING] ?: false }
+    val autoUpdateCheck: Flow<Boolean> = context.dataStore.data.map { it[Keys.AUTO_UPDATE_CHECK] ?: true }
+
+    /** Version the user chose "skip" for in the startup update prompt; manual checks ignore it. */
+    val skippedUpdateVersion: Flow<String?> = context.dataStore.data.map { it[Keys.SKIPPED_UPDATE_VERSION] }
 
     suspend fun setArmed(value: Boolean) = context.dataStore.edit { it[Keys.ARMED] = value }
     suspend fun setDndBypassEnabled(value: Boolean) = context.dataStore.edit { it[Keys.DND_BYPASS_ENABLED] = value }
     suspend fun setDismissMode(value: DismissMode) = context.dataStore.edit { it[Keys.DISMISS_MODE] = value.name }
     suspend fun setMaxVolumeOnRing(value: Boolean) = context.dataStore.edit { it[Keys.MAX_VOLUME_ON_RING] = value }
+    suspend fun setAutoUpdateCheck(value: Boolean) = context.dataStore.edit { it[Keys.AUTO_UPDATE_CHECK] = value }
+    suspend fun setSkippedUpdateVersion(value: String) = context.dataStore.edit { it[Keys.SKIPPED_UPDATE_VERSION] = value }
 
     suspend fun isDndOverrideActive(): Boolean =
         context.dataStore.data.map { it[Keys.DND_OVERRIDE_ACTIVE] ?: false }.first()

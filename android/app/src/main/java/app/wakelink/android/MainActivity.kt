@@ -20,6 +20,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
@@ -39,6 +42,9 @@ import app.wakelink.android.pairing.parseInviteCode
 import app.wakelink.android.settings.SettingsScreen
 import app.wakelink.android.status.ArmedStatusNotifier
 import app.wakelink.android.ui.theme.WakeLinkTheme
+import app.wakelink.android.update.AppUpdater
+import app.wakelink.android.update.UpdateDialog
+import app.wakelink.android.update.UpdateInfo
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -67,6 +73,7 @@ class MainActivity : ComponentActivity() {
                 // above each screen matches the screen itself.
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     RequestNotificationPermission()
+                    StartupUpdateCheck()
 
                     val navController = rememberNavController()
                     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
@@ -133,6 +140,34 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
+     * Once per launch, offer a newer GitHub release if there is one (unless
+     * the user turned this off or skipped that exact version). Failures are
+     * silent -- being offline at startup isn't worth an error.
+     */
+    @Composable
+    private fun StartupUpdateCheck() {
+        var update by rememberSaveable(stateSaver = updateInfoSaver) { mutableStateOf<UpdateInfo?>(null) }
+        var checked by rememberSaveable { mutableStateOf(false) }
+        val settings = remember { SettingsRepository(applicationContext) }
+        LaunchedEffect(Unit) {
+            if (checked || !settings.autoUpdateCheck.first()) return@LaunchedEffect
+            checked = true
+            val found = runCatching { AppUpdater.checkForUpdate() }.getOrNull() ?: return@LaunchedEffect
+            if (found.versionName != settings.skippedUpdateVersion.first()) update = found
+        }
+        update?.let { info ->
+            UpdateDialog(
+                info = info,
+                onDismiss = { update = null },
+                onSkip = {
+                    update = null
+                    lifecycleScope.launch { settings.setSkippedUpdateVersion(info.versionName) }
+                },
+            )
+        }
+    }
+
+    /**
      * Android 13+ needs a runtime grant before *any* notification shows --
      * including the alarm's full-screen intent and the always-visible
      * armed-status notification -- so ask once up front.
@@ -155,3 +190,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+/** Keeps a pending update prompt across rotation instead of re-checking. */
+private val updateInfoSaver = listSaver<UpdateInfo?, Any>(
+    save = { info -> if (info == null) emptyList() else listOf(info.versionName, info.notes, info.apkUrl, info.sizeBytes) },
+    restore = { list ->
+        if (list.isEmpty()) null
+        else UpdateInfo(list[0] as String, list[1] as String, list[2] as String, list[3] as Long)
+    },
+)

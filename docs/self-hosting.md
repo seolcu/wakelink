@@ -41,7 +41,11 @@ end to end:
    `./gradlew assembleRelease`) using this now-real `google-services.json`,
    and optionally override `DEFAULT_SERVER_BASE_URL` in
    `android/app/build.gradle.kts` to point at your own backend's public
-   URL instead of the maintainer's default.
+   URL instead of the maintainer's default. Also change `UPDATE_REPO`
+   there to your own fork's `owner/repo` (or `""` to turn the in-app
+   updater off), and set `APK_DOWNLOAD_URL` in the server's `.env` --
+   otherwise your users get offered the maintainer's releases, which
+   their phones will refuse to install over your differently-signed APK.
 6. Install that APK on both your and your contact's phones (sideload, or
    publish it yourself under your own Play Store listing / F-Droid, etc.).
 

@@ -26,8 +26,11 @@ android {
         applicationId = "app.wakelink.android"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        // Bump both for every release: versionName becomes the GitHub
+        // release tag (v<versionName>) the in-app updater compares against,
+        // and Android refuses to install a lower versionCode over a higher one.
+        versionCode = 2
+        versionName = "0.2.0"
 
         // Overridable at build time for self-hosted forks; the official
         // Play Store build ships with the maintainer's default instance.
@@ -36,6 +39,12 @@ android {
         // FCM tokens are scoped to the Firebase project baked into
         // google-services.json.
         buildConfigField("String", "DEFAULT_SERVER_BASE_URL", "\"https://wake.seolcu.com\"")
+
+        // GitHub "owner/repo" whose latest release the in-app updater
+        // offers. Forks signing with their own key must change (or blank,
+        // to disable) this -- the installer rejects APKs signed by a
+        // different key anyway.
+        buildConfigField("String", "UPDATE_REPO", "\"seolcu/wakelink\"")
     }
 
     signingConfigs {

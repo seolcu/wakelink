@@ -85,6 +85,21 @@ default, override `DEFAULT_SERVER_BASE_URL` in `app/build.gradle.kts`'s
 Firebase project-scoping note below before assuming that alone makes
 self-hosting work.
 
+### Releasing the APK
+
+Bump `versionCode` and `versionName` in `android/app/build.gradle.kts`,
+commit and push, then run `scripts/release-android.sh [notes.md]`. It
+refuses to run on a dirty/unpushed tree or an existing tag, builds
+`assembleRelease` with the upload key, and publishes GitHub release
+`v<versionName>` with the APK attached as exactly `wakelink.apk`. The
+in-app updater (`android/.../update/AppUpdater.kt`) reads
+`releases/latest` of `BuildConfig.UPDATE_REPO`, compares the tag against
+`VERSION_NAME`, and hands that asset to the system installer;
+`https://wake.seolcu.com/download` (`APK_DOWNLOAD_URL`, `GET /download`)
+redirects to `releases/latest/download/wakelink.apk`. Always sign with the
+same key -- Android rejects an update signed differently, and a debug
+build can't be updated to a release build (uninstall first).
+
 ### CI
 
 `.github/workflows/backend.yml` and `android.yml` run on every push

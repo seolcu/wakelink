@@ -10,6 +10,17 @@ alarm, you can still wake them up.
 - **`android/`** -- the single Android app. Every install can both wake
   contacts and be woken by them (no separate "sender"/"receiver" app).
 
+## Install
+
+Download the latest APK: **<https://wake.seolcu.com/download>** (redirects to
+[the newest GitHub release](https://github.com/seolcu/wakelink/releases/latest)).
+WakeLink isn't on the Play Store, so Android will ask you to allow
+installing apps from your browser or file manager once.
+
+After that the app keeps itself current: it checks for a new release
+whenever it opens (and on demand under Settings -> App update), downloads
+it, and opens the system installer -- you just confirm.
+
 ## How it works, in one paragraph
 
 Android's ringer "silent" mode only mutes the ring/notification audio

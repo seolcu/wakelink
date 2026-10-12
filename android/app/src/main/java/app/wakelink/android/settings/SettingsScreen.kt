@@ -25,6 +25,8 @@ import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.PhoneLocked
 import androidx.compose.material.icons.rounded.PowerSettingsNew
+import androidx.compose.material.icons.rounded.SystemUpdate
+import androidx.compose.material.icons.rounded.Update
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.AlertDialog
@@ -54,6 +56,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import app.wakelink.android.BuildConfig
 import app.wakelink.android.alarm.AlarmForegroundService
 import app.wakelink.android.data.DismissMode
 import app.wakelink.android.data.SettingsRepository
@@ -72,6 +75,9 @@ import app.wakelink.android.ui.components.SettingsRow
 import app.wakelink.android.ui.components.StatusKind
 import app.wakelink.android.ui.components.StatusPill
 import app.wakelink.android.ui.theme.WakeTheme
+import app.wakelink.android.update.AppUpdater
+import app.wakelink.android.update.UpdateDialog
+import app.wakelink.android.update.UpdateInfo
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -98,11 +104,17 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
     var confirmRotateKey by remember { mutableStateOf(false) }
     var keyRotated by remember { mutableStateOf(false) }
 
+    var autoUpdateCheck by remember { mutableStateOf(true) }
+    var checkingUpdate by remember { mutableStateOf(false) }
+    var updateStatus by remember { mutableStateOf<String?>(null) }
+    var availableUpdate by remember { mutableStateOf<UpdateInfo?>(null) }
+
     LaunchedEffect(Unit) {
         armed = settings.armed.first()
         dndBypass = settings.dndBypassEnabled.first()
         dismissMode = settings.dismissMode.first()
         maxVolume = settings.maxVolumeOnRing.first()
+        autoUpdateCheck = settings.autoUpdateCheck.first()
         try {
             myName = api.getMe().displayName
         } catch (e: Exception) {
@@ -274,6 +286,52 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                     }
                 }
             }
+
+            if (AppUpdater.isEnabled) {
+                SectionCard("앱 업데이트") {
+                    SettingsRow(
+                        icon = Icons.Rounded.SystemUpdate,
+                        title = "업데이트 확인",
+                        supporting = when {
+                            checkingUpdate -> "확인하는 중…"
+                            updateStatus != null -> updateStatus
+                            else -> "지금 버전 ${BuildConfig.VERSION_NAME}"
+                        },
+                        onClick = if (checkingUpdate) null else {
+                            {
+                                checkingUpdate = true
+                                updateStatus = null
+                                scope.launch {
+                                    try {
+                                        val found = AppUpdater.checkForUpdate()
+                                        if (found == null) {
+                                            updateStatus = "최신 버전이에요 (${BuildConfig.VERSION_NAME})"
+                                        } else {
+                                            availableUpdate = found
+                                            updateStatus = "새 버전 ${found.versionName} 있어요"
+                                        }
+                                    } catch (e: Exception) {
+                                        updateStatus = "확인하지 못했어요: ${e.message ?: "네트워크 오류"}"
+                                    } finally {
+                                        checkingUpdate = false
+                                    }
+                                }
+                            }
+                        },
+                    )
+                    SettingsRow(
+                        icon = Icons.Rounded.Update,
+                        title = "앱 열 때 자동으로 확인",
+                        supporting = "새 버전이 있으면 알려줘요. 설치는 직접 확인한 뒤에만 해요",
+                        trailing = {
+                            Switch(checked = autoUpdateCheck, onCheckedChange = { value ->
+                                autoUpdateCheck = value
+                                scope.launch { settings.setAutoUpdateCheck(value) }
+                            })
+                        },
+                    )
+                }
+            }
         }
     }
 
@@ -307,6 +365,10 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
             },
             dismissButton = { TextButton(onClick = { renaming = false }) { Text("취소") } },
         )
+    }
+
+    availableUpdate?.let { info ->
+        UpdateDialog(info = info, onDismiss = { availableUpdate = null })
     }
 
     if (confirmRotateKey) {
