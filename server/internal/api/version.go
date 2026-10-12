@@ -14,8 +14,9 @@ func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleMetrics exposes coarse, non-PII counters (see internal/metrics) for
-// a single-tenant deployment's own visibility -- no auth required, since it
-// carries counts only, never user or pairing identifiers.
+// a deployment's own visibility. They are instance-wide, not per-user, but
+// still sit behind auth so the public instance doesn't advertise its
+// traffic to anyone who asks.
 func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]int64{
 		"triggers_sent":   s.Metrics.TriggersSent.Load(),

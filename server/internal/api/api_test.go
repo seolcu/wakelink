@@ -563,7 +563,10 @@ func TestMetricsCountsTriggers(t *testing.T) {
 		t.Fatalf("ack: status %d body %s", rec.Code, rec.Body.String())
 	}
 
-	rec = doJSON(t, router, http.MethodGet, "/v1/metrics", "", nil)
+	if rec := doJSON(t, router, http.MethodGet, "/v1/metrics", "", nil); rec.Code != http.StatusUnauthorized {
+		t.Fatalf("unauthenticated metrics: expected 401, got %d", rec.Code)
+	}
+	rec = doJSON(t, router, http.MethodGet, "/v1/metrics", alice.APIKey, nil)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("metrics: status %d body %s", rec.Code, rec.Body.String())
 	}
