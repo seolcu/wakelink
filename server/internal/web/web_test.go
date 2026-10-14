@@ -37,7 +37,7 @@ func TestIndexPage(t *testing.T) {
 		t.Fatalf("index: status %d", rec.Code)
 	}
 	body := rec.Body.String()
-	for _, want := range []string{"WakeLink", `href="/download"`, `og:image" content="https://example.com/assets/og-en.png"`} {
+	for _, want := range []string{"WakeLink", `href="/download"`, `og:image" content="https://example.com/assets/og-en.png?v=`} {
 		if !strings.Contains(body, want) {
 			t.Errorf("index missing %q", want)
 		}
@@ -72,6 +72,14 @@ func TestAssets(t *testing.T) {
 		if rec := get(t, h, path); rec.Code != http.StatusOK {
 			t.Errorf("%s: status %d", path, rec.Code)
 		}
+	}
+	site, _ := New(Config{})
+	versioned, _ := site.assetURL("site.css")
+	if rec := get(t, h, versioned); !strings.Contains(rec.Header().Get("Cache-Control"), "immutable") {
+		t.Errorf("content-versioned asset should be cached immutably, got %q", rec.Header().Get("Cache-Control"))
+	}
+	if rec := get(t, h, "/assets/site.css?v=stale"); strings.Contains(rec.Header().Get("Cache-Control"), "immutable") {
+		t.Errorf("a stale version must not be cached forever")
 	}
 	if rec := get(t, h, "/robots.txt"); !strings.Contains(rec.Body.String(), "Disallow: /invite/") {
 		t.Errorf("robots.txt should keep invite pages out of search")

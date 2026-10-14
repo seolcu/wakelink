@@ -8,7 +8,7 @@
   </div>
   <div class="wrap">
     <nav class="topbar">
-      <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="36" height="36">WakeLink</a>
+      <a class="brand" href="/"><img src="{{asset "logo.svg"}}" alt="" width="36" height="36">WakeLink</a>
       <div class="topbar-links">{{template "langswitch" .}}</div>
     </nav>
   </div>
@@ -44,5 +44,5 @@
     <p class="center"><a href="/">What is WakeLink?</a></p>
   </div>
 </main>
-<script src="/assets/invite.js"></script>
+<script src="{{asset "invite.js"}}"></script>
 {{end}}

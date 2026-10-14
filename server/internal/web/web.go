@@ -7,6 +7,7 @@ package web
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"embed"
 	"encoding/hex"
 	"encoding/json"
@@ -49,14 +50,34 @@ type Site struct {
 	pages      map[string]map[string]*template.Template
 	assets     http.Handler
 	assetLinks []byte
+	// assetVersions maps an asset name to a short hash of its content, so
+	// pages can reference /assets/x?v=<hash>: a redeploy changes the URL,
+	// and versioned URLs can be cached forever.
+	assetVersions map[string]string
 }
 
 func New(cfg Config) (*Site, error) {
-	s := &Site{cfg: cfg, pages: map[string]map[string]*template.Template{}}
+	s := &Site{cfg: cfg, pages: map[string]map[string]*template.Template{}, assetVersions: map[string]string{}}
+	err := fs.WalkDir(files, "assets", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		b, err := files.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		sum := sha256.Sum256(b)
+		s.assetVersions[strings.TrimPrefix(path, "assets/")] = hex.EncodeToString(sum[:])[:10]
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	funcs := template.FuncMap{"asset": s.assetURL}
 	for _, lang := range []string{langKorean, langEnglish} {
 		s.pages[lang] = map[string]*template.Template{}
 		for _, name := range []string{"index.html", "invite.html"} {
-			t, err := template.ParseFS(files, "templates/base.html", "templates/"+lang+"/"+name)
+			t, err := template.New("base.html").Funcs(funcs).ParseFS(files, "templates/base.html", "templates/"+lang+"/"+name)
 			if err != nil {
 				return nil, err
 			}
@@ -155,10 +176,23 @@ func (s *Site) handleInvite(w http.ResponseWriter, r *http.Request) {
 	s.render(w, r, "invite.html", pageData{Code: code})
 }
 
+// assetURL is the template func behind {{asset "site.css"}}.
+func (s *Site) assetURL(name string) (string, error) {
+	v, ok := s.assetVersions[name]
+	if !ok {
+		return "", fmt.Errorf("unknown asset %q", name)
+	}
+	return "/assets/" + name + "?v=" + v, nil
+}
+
 func (s *Site) handleAsset(w http.ResponseWriter, r *http.Request) {
-	// Assets aren't fingerprinted, so keep the cache short enough that a
-	// redeploy shows up within the hour.
-	w.Header().Set("Cache-Control", "public, max-age=3600")
+	name := strings.TrimPrefix(r.URL.Path, "/assets/")
+	if v := r.URL.Query().Get("v"); v != "" && v == s.assetVersions[name] {
+		// Content-addressed URL: it can never change, so cache it for good.
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	} else {
+		w.Header().Set("Cache-Control", "public, max-age=300")
+	}
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	s.assets.ServeHTTP(w, r)
 }

@@ -145,7 +145,15 @@ p { margin: 0 0 1em; }
 .brand img { border-radius: 10px; }
 .brand-small { font-size: 1.05rem; }
 .brand-small img { border-radius: 8px; }
-.topbar-links { display: flex; align-items: center; gap: 20px; }
+.topbar-links { display: flex; align-items: center; gap: 28px; }
+.lang-switch {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 999px;
+  color: #fff; text-decoration: none; font-weight: 600; font-size: .95rem;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .3);
+  transition: background-color .15s ease;
+}
+.lang-switch:hover { background: rgba(255, 255, 255, .1); }
 .topbar-link { color: rgba(255, 255, 255, .8); text-decoration: none; font-weight: 600; }
 .topbar-link:hover { color: #fff; }
 
@@ -161,13 +169,16 @@ p { margin: 0 0 1em; }
   font-weight: 600; font-size: .9rem;
 }
 .hero h1 { font-size: clamp(2.3rem, 6vw, 3.6rem); font-weight: 800; margin-bottom: 20px; }
-/* English headlines run longer than the Korean ones. */
-html[lang="en"] .hero h1 { font-size: clamp(2.1rem, 5vw, 3rem); }
+/* Each phrase on its own line, wrapped evenly if it still doesn't fit. */
+.hero h1 .line { display: block; text-wrap: balance; }
+/* English headlines run longer than the Korean ones: sized so each
+   phrase fits on one line in the desktop hero column. */
+html[lang="en"] .hero h1 { font-size: clamp(2rem, 4.1vw, 2.75rem); letter-spacing: -0.03em; }
 .accent {
   background: linear-gradient(90deg, var(--dawn), var(--sunrise-soft));
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
-.lead { font-size: 1.15rem; color: rgba(255, 255, 255, .82); max-width: 32em; }
+.lead { font-size: 1.15rem; color: rgba(255, 255, 255, .82); max-width: 32em; text-wrap: pretty; }
 .cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin: 28px 0 16px; }
 .fineprint { font-size: .85rem; color: rgba(255, 255, 255, .6); }
 

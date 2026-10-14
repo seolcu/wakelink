@@ -10,13 +10,13 @@
   </div>
   <div class="wrap">
     <nav class="topbar">
-      <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="36" height="36">WakeLink</a>
+      <a class="brand" href="/"><img src="{{asset "logo.svg"}}" alt="" width="36" height="36">WakeLink</a>
       <div class="topbar-links">{{template "langswitch" .}}<a class="topbar-link" href="https://github.com/seolcu/wakelink">GitHub</a></div>
     </nav>
     <div class="hero-grid">
       <div class="hero-copy">
         <p class="eyebrow">For the friend who snoozed one too many times</p>
-        <h1>Slept through your alarm?<br><span class="accent">A friend can wake you.</span></h1>
+        <h1><span class="line">Slept through your alarm?</span> <span class="line accent">A friend can wake you.</span></h1>
         <p class="lead">Someone you trust taps one button and your phone rings out loud, even on silent. They can see right away that it actually rang.</p>
         <div class="cta-row">
           <a class="btn btn-primary" href="{{.DownloadHref}}">
@@ -181,7 +181,7 @@
 
   <section class="section final-cta">
     <div class="wrap narrow center">
-      <img src="/assets/logo.svg" alt="" width="72" height="72">
+      <img src="{{asset "logo.svg"}}" alt="" width="72" height="72">
       <h2>Worried about tomorrow morning?</h2>
       <p>Install it together with the person who'll wake you.</p>
       <a class="btn btn-primary" href="{{.DownloadHref}}">Get the Android app</a>

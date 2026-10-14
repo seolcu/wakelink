@@ -14,21 +14,21 @@
 <meta property="og:locale" content="{{if eq .Lang "ko"}}ko_KR{{else}}en_US{{end}}">
 <meta property="og:title" content="{{template "title" .}}">
 <meta property="og:description" content="{{template "description" .}}">
-<meta property="og:image" content="{{.Origin}}/assets/{{if eq .Lang "ko"}}og.png{{else}}og-en.png{{end}}">
+<meta property="og:image" content="{{.Origin}}{{if eq .Lang "ko"}}{{asset "og.png"}}{{else}}{{asset "og-en.png"}}{{end}}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-<link rel="icon" href="/assets/favicon-32.png" sizes="32x32" type="image/png">
-<link rel="apple-touch-icon" href="/assets/icon-180.png">
+<link rel="icon" href="{{asset "favicon.svg"}}" type="image/svg+xml">
+<link rel="icon" href="{{asset "favicon-32.png"}}" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="{{asset "icon-180.png"}}">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<link rel="stylesheet" href="/assets/site.css">
+<link rel="stylesheet" href="{{asset "site.css"}}">
 </head>
 <body>
 {{template "content" .}}
 <footer class="footer">
   <div class="wrap footer-inner">
-    <a class="brand brand-small" href="/"><img src="/assets/logo.svg" alt="" width="28" height="28">WakeLink</a>
+    <a class="brand brand-small" href="/"><img src="{{asset "logo.svg"}}" alt="" width="28" height="28">WakeLink</a>
     <nav class="footer-links">
       <a href="https://github.com/seolcu/wakelink">GitHub</a>
       {{if eq .Lang "ko"}}<a href="https://github.com/seolcu/wakelink/releases">릴리스 노트</a>
@@ -43,4 +43,4 @@
 </body>
 </html>{{end}}
 
-{{define "langswitch"}}{{if eq .Lang "ko"}}<a class="topbar-link" href="{{.Path}}?lang=en" hreflang="en" lang="en">English</a>{{else}}<a class="topbar-link" href="{{.Path}}?lang=ko" hreflang="ko" lang="ko">한국어</a>{{end}}{{end}}
+{{define "langswitch"}}{{if eq .Lang "ko"}}<a class="lang-switch" href="{{.Path}}?lang=en" hreflang="en" lang="en"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm-8.5 9h17M12 3c2.5 2.4 3.8 5.5 3.8 9s-1.3 6.6-3.8 9c-2.5-2.4-3.8-5.5-3.8-9S9.5 5.4 12 3Z"/></svg>English</a>{{else}}<a class="lang-switch" href="{{.Path}}?lang=ko" hreflang="ko" lang="ko"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm-8.5 9h17M12 3c2.5 2.4 3.8 5.5 3.8 9s-1.3 6.6-3.8 9c-2.5-2.4-3.8-5.5-3.8-9S9.5 5.4 12 3Z"/></svg>한국어</a>{{end}}{{end}}

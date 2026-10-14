@@ -10,13 +10,13 @@
   </div>
   <div class="wrap">
     <nav class="topbar">
-      <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="36" height="36">WakeLink</a>
+      <a class="brand" href="/"><img src="{{asset "logo.svg"}}" alt="" width="36" height="36">WakeLink</a>
       <div class="topbar-links">{{template "langswitch" .}}<a class="topbar-link" href="https://github.com/seolcu/wakelink">GitHub</a></div>
     </nav>
     <div class="hero-grid">
       <div class="hero-copy">
         <p class="eyebrow">알람 끄고 다시 잠든 친구에게</p>
-        <h1>알람 못 들어도,<br><span class="accent">친구가 깨워줄게요</span></h1>
+        <h1><span class="line">알람 못 들어도,</span> <span class="line accent">친구가 깨워줄게요</span></h1>
         <p class="lead">무음 모드여도 믿는 사람이 버튼 하나로 내 폰에서 큰 알람을 울려줘요. 진짜 울렸는지도 바로 확인돼요.</p>
         <div class="cta-row">
           <a class="btn btn-primary" href="{{.DownloadHref}}">
@@ -181,7 +181,7 @@
 
   <section class="section final-cta">
     <div class="wrap narrow center">
-      <img src="/assets/logo.svg" alt="" width="72" height="72">
+      <img src="{{asset "logo.svg"}}" alt="" width="72" height="72">
       <h2>내일 아침이 걱정된다면</h2>
       <p>깨워줄 사람과 같이 설치해 두세요.</p>
       <a class="btn btn-primary" href="{{.DownloadHref}}">Android 앱 받기</a>
