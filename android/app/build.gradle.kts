@@ -29,8 +29,8 @@ android {
         // Bump both for every release: versionName becomes the GitHub
         // release tag (v<versionName>) the in-app updater compares against,
         // and Android refuses to install a lower versionCode over a higher one.
-        versionCode = 3
-        versionName = "0.2.1"
+        versionCode = 4
+        versionName = "0.2.2"
 
         // Overridable at build time for self-hosted forks; the official
         // Play Store build ships with the maintainer's default instance.
@@ -76,6 +76,13 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    // values/ is English (also the fallback for unsupported languages),
+    // values-ko/ Korean; this exposes both in Android 13+'s per-app
+    // language setting.
+    androidResources {
+        generateLocaleConfig = true
     }
 
     compileOptions {

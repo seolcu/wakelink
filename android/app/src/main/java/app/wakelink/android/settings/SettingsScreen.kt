@@ -54,9 +54,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import app.wakelink.android.BuildConfig
+import app.wakelink.android.R
 import app.wakelink.android.alarm.AlarmForegroundService
 import app.wakelink.android.data.DismissMode
 import app.wakelink.android.data.SettingsRepository
@@ -118,7 +120,7 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
         try {
             myName = api.getMe().displayName
         } catch (e: Exception) {
-            accountError = "계정 정보를 불러오지 못했어요: ${e.toUserMessage()}"
+            accountError = context.getString(R.string.settings_account_load_failed, e.toUserMessage(context))
         }
     }
 
@@ -133,9 +135,9 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("설정") },
+                title = { Text(stringResource(R.string.common_settings)) },
                 navigationIcon = {
-                    IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "뒤로") }
+                    IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back)) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
@@ -149,7 +151,7 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(start = 16.dp, end = 16.dp, bottom = 32.dp),
         ) {
-            SectionCard("계정") {
+            SectionCard(stringResource(R.string.settings_account)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -157,15 +159,15 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                 ) {
                     Avatar(myName ?: "?", size = 48.dp)
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(myName ?: "불러오는 중…", style = MaterialTheme.typography.titleMedium)
+                        Text(myName ?: stringResource(R.string.common_loading), style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "연결된 사람에게 보이는 이름",
+                            stringResource(R.string.settings_name_caption),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     IconButton(enabled = myName != null, onClick = { renaming = true }) {
-                        Icon(Icons.Rounded.Edit, contentDescription = "이름 변경")
+                        Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.settings_rename))
                     }
                 }
                 accountError?.let {
@@ -174,25 +176,25 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 SettingsRow(
                     icon = Icons.Rounded.Key,
-                    title = "API 키 재발급",
-                    supporting = if (keyRotated) "새 키로 바꿨어요. 이전 키는 더 이상 쓸 수 없어요" else "키가 유출된 것 같을 때만 쓰세요. 연결은 그대로 유지돼요",
+                    title = stringResource(R.string.settings_rotate_key),
+                    supporting = stringResource(if (keyRotated) R.string.settings_rotate_key_done else R.string.settings_rotate_key_hint),
                     onClick = { confirmRotateKey = true },
                 )
                 SettingsRow(
                     icon = Icons.Rounded.DeleteForever,
-                    title = "계정 삭제",
-                    supporting = "모든 연결과 기록이 지워져요",
+                    title = stringResource(R.string.settings_delete_account),
+                    supporting = stringResource(R.string.settings_delete_account_hint),
                     iconTint = MaterialTheme.colorScheme.error,
                     titleColor = MaterialTheme.colorScheme.error,
                     onClick = { confirmDelete = true },
                 )
             }
 
-            SectionCard("알람 받기") {
+            SectionCard(stringResource(R.string.settings_receiving)) {
                 SettingsRow(
                     icon = Icons.Rounded.PowerSettingsNew,
-                    title = "활성화",
-                    supporting = if (armed) "연결된 사람이 나를 깨울 수 있어요" else "꺼져 있어 아무도 나를 깨울 수 없어요",
+                    title = stringResource(R.string.settings_armed),
+                    supporting = stringResource(if (armed) R.string.settings_armed_on else R.string.settings_armed_off),
                     trailing = {
                         Switch(checked = armed, onCheckedChange = { value ->
                             armed = value
@@ -205,11 +207,11 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                 )
                 SettingsRow(
                     icon = Icons.Rounded.DoNotDisturbOn,
-                    title = "방해 금지 '완전 무음'도 뚫기",
+                    title = stringResource(R.string.settings_dnd_bypass),
                     supporting = if (dndBypass && !dndAccessGranted) {
-                        "방해 금지 액세스 권한에서 WakeLink를 허용해야 동작해요"
+                        stringResource(R.string.settings_dnd_needs_access)
                     } else {
-                        "울리는 동안만 바꾸고, 끝나면 되돌려요"
+                        stringResource(R.string.settings_dnd_hint)
                     },
                     trailing = {
                         Switch(checked = dndBypass, onCheckedChange = { value ->
@@ -223,8 +225,8 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                 )
                 SettingsRow(
                     icon = Icons.Rounded.TouchApp,
-                    title = "탭하면 바로 끄기",
-                    supporting = if (dismissMode == DismissMode.TAP_TO_DISMISS) "잠금 해제 없이 버튼만 누르면 꺼져요" else "끄려면 잠금을 해제해야 해요",
+                    title = stringResource(R.string.settings_tap_dismiss),
+                    supporting = stringResource(if (dismissMode == DismissMode.TAP_TO_DISMISS) R.string.settings_tap_dismiss_on else R.string.settings_tap_dismiss_off),
                     trailing = {
                         Switch(checked = dismissMode == DismissMode.TAP_TO_DISMISS, onCheckedChange = { tapToDismiss ->
                             val mode = if (tapToDismiss) DismissMode.TAP_TO_DISMISS else DismissMode.UNLOCK_REQUIRED
@@ -235,8 +237,8 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                 )
                 SettingsRow(
                     icon = Icons.AutoMirrored.Rounded.VolumeUp,
-                    title = "울릴 때 알람 볼륨 최대로",
-                    supporting = "끝나면 원래 볼륨으로 돌아가요",
+                    title = stringResource(R.string.settings_max_volume),
+                    supporting = stringResource(R.string.settings_max_volume_hint),
                     trailing = {
                         Switch(checked = maxVolume, onCheckedChange = { value ->
                             maxVolume = value
@@ -250,26 +252,26 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                     onClick = {
                         val intent = Intent(context, AlarmForegroundService::class.java).apply {
                             putExtra(AlarmForegroundService.EXTRA_TRIGGER_ID, -1L)
-                            putExtra(AlarmForegroundService.EXTRA_FROM_DISPLAY_NAME, "테스트")
+                            putExtra(AlarmForegroundService.EXTRA_FROM_DISPLAY_NAME, context.getString(R.string.settings_test_sender))
                         }
                         ContextCompat.startForegroundService(context, intent)
                     },
                 ) {
-                    Text("테스트 알람 울리기")
+                    Text(stringResource(R.string.settings_test_alarm))
                 }
             }
 
             readiness?.let { r ->
-                SectionCard("기기 준비 상태") {
+                SectionCard(stringResource(R.string.settings_readiness)) {
                     ReadinessRow(
-                        Icons.Rounded.NotificationsActive, "알림 허용", "꺼져 있으면 알람이 표시되지 않아요", r.notificationsEnabled,
+                        Icons.Rounded.NotificationsActive, stringResource(R.string.settings_ready_notifications), stringResource(R.string.settings_ready_notifications_hint), r.notificationsEnabled,
                     ) {
                         context.startActivity(
                             Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
                         )
                     }
                     ReadinessRow(
-                        Icons.Rounded.PhoneLocked, "잠금 화면 전체 화면 알람", "잠긴 폰에서 알람 화면을 바로 띄워요", r.fullScreenIntentAllowed,
+                        Icons.Rounded.PhoneLocked, stringResource(R.string.settings_ready_full_screen), stringResource(R.string.settings_ready_full_screen_hint), r.fullScreenIntentAllowed,
                     ) {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                             context.startActivity(
@@ -278,7 +280,7 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                         }
                     }
                     ReadinessRow(
-                        Icons.Rounded.BatteryAlert, "배터리 최적화 제외", "자는 동안에도 깨우기를 바로 받아요", r.ignoringBatteryOptimizations,
+                        Icons.Rounded.BatteryAlert, stringResource(R.string.settings_ready_battery), stringResource(R.string.settings_ready_battery_hint), r.ignoringBatteryOptimizations,
                     ) {
                         context.startActivity(
                             Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${context.packageName}"))
@@ -288,14 +290,14 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
             }
 
             if (AppUpdater.isEnabled) {
-                SectionCard("앱 업데이트") {
+                SectionCard(stringResource(R.string.settings_updates)) {
                     SettingsRow(
                         icon = Icons.Rounded.SystemUpdate,
-                        title = "업데이트 확인",
+                        title = stringResource(R.string.settings_check_update),
                         supporting = when {
-                            checkingUpdate -> "확인하는 중…"
+                            checkingUpdate -> stringResource(R.string.settings_checking_update)
                             updateStatus != null -> updateStatus
-                            else -> "지금 버전 ${BuildConfig.VERSION_NAME}"
+                            else -> stringResource(R.string.settings_current_version, BuildConfig.VERSION_NAME)
                         },
                         onClick = if (checkingUpdate) null else {
                             {
@@ -305,13 +307,13 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                                     try {
                                         val found = AppUpdater.checkForUpdate()
                                         if (found == null) {
-                                            updateStatus = "최신 버전이에요 (${BuildConfig.VERSION_NAME})"
+                                            updateStatus = context.getString(R.string.settings_up_to_date, BuildConfig.VERSION_NAME)
                                         } else {
                                             availableUpdate = found
-                                            updateStatus = "새 버전 ${found.versionName} 있어요"
+                                            updateStatus = context.getString(R.string.settings_update_available, found.versionName)
                                         }
                                     } catch (e: Exception) {
-                                        updateStatus = "확인하지 못했어요: ${e.message ?: "네트워크 오류"}"
+                                        updateStatus = context.getString(R.string.settings_update_check_failed, e.message ?: context.getString(R.string.settings_network_error))
                                     } finally {
                                         checkingUpdate = false
                                     }
@@ -321,8 +323,8 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                     )
                     SettingsRow(
                         icon = Icons.Rounded.Update,
-                        title = "앱 열 때 자동으로 확인",
-                        supporting = "새 버전이 있으면 알려줘요. 설치는 직접 확인한 뒤에만 해요",
+                        title = stringResource(R.string.settings_auto_update),
+                        supporting = stringResource(R.string.settings_auto_update_hint),
                         trailing = {
                             Switch(checked = autoUpdateCheck, onCheckedChange = { value ->
                                 autoUpdateCheck = value
@@ -341,7 +343,7 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
         AlertDialog(
             onDismissRequest = { renaming = false },
             icon = { Icon(Icons.Rounded.Edit, contentDescription = null) },
-            title = { Text("이름 변경") },
+            title = { Text(stringResource(R.string.settings_rename_title)) },
             text = {
                 OutlinedTextField(
                     value = draft,
@@ -358,12 +360,12 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                             myName = api.patchMe(PatchMeRequest(displayName = draft.trim())).displayName
                             renaming = false
                         } catch (e: Exception) {
-                            renameError = e.toUserMessage()
+                            renameError = e.toUserMessage(context)
                         }
                     }
-                }) { Text("저장") }
+                }) { Text(stringResource(R.string.settings_save)) }
             },
-            dismissButton = { TextButton(onClick = { renaming = false }) { Text("취소") } },
+            dismissButton = { TextButton(onClick = { renaming = false }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
 
@@ -375,8 +377,8 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
         AlertDialog(
             onDismissRequest = { confirmRotateKey = false },
             icon = { Icon(Icons.Rounded.Key, contentDescription = null) },
-            title = { Text("API 키를 재발급할까요?") },
-            text = { Text("이 기기에 저장된 키가 즉시 새 키로 바뀌고, 이전 키는 바로 무효화돼요.") },
+            title = { Text(stringResource(R.string.settings_rotate_title)) },
+            text = { Text(stringResource(R.string.settings_rotate_body)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmRotateKey = false
@@ -387,12 +389,12 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                             keyRotated = true
                             accountError = null
                         } catch (e: Exception) {
-                            accountError = "키 재발급 실패: ${e.toUserMessage()}"
+                            accountError = context.getString(R.string.settings_rotate_failed, e.toUserMessage(context))
                         }
                     }
-                }) { Text("재발급") }
+                }) { Text(stringResource(R.string.settings_rotate_confirm)) }
             },
-            dismissButton = { TextButton(onClick = { confirmRotateKey = false }) { Text("취소") } },
+            dismissButton = { TextButton(onClick = { confirmRotateKey = false }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
 
@@ -400,8 +402,8 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
             icon = { Icon(Icons.Rounded.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-            title = { Text("계정을 삭제할까요?") },
-            text = { Text("모든 연결과 기록이 삭제되고 되돌릴 수 없어요. 다시 쓰려면 처음부터 등록하고 초대 코드를 다시 주고받아야 해요.") },
+            title = { Text(stringResource(R.string.settings_delete_title)) },
+            text = { Text(stringResource(R.string.settings_delete_body)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = false
@@ -411,12 +413,12 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                             tokenStore.clear()
                             onAccountDeleted()
                         } catch (e: Exception) {
-                            accountError = "계정 삭제 실패: ${e.toUserMessage()}"
+                            accountError = context.getString(R.string.settings_delete_failed, e.toUserMessage(context))
                         }
                     }
-                }) { Text("삭제", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.settings_delete_confirm), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("취소") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
 }
@@ -437,11 +439,11 @@ private fun ReadinessRow(
         onClick = if (ok) null else onFix,
         trailing = {
             if (ok) {
-                Icon(Icons.Rounded.CheckCircle, contentDescription = "완료", tint = WakeTheme.status.success)
+                Icon(Icons.Rounded.CheckCircle, contentDescription = stringResource(R.string.settings_ready_done), tint = WakeTheme.status.success)
             } else {
                 TextButton(onClick = onFix) {
                     Icon(Icons.Rounded.WarningAmber, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
-                    Text("설정")
+                    Text(stringResource(R.string.settings_ready_fix))
                 }
             }
         },

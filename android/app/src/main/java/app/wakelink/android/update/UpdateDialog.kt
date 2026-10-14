@@ -23,8 +23,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.wakelink.android.BuildConfig
+import app.wakelink.android.R
 import app.wakelink.android.ui.OnResume
 import kotlinx.coroutines.launch
 import java.io.File
@@ -67,12 +69,12 @@ fun UpdateDialog(info: UpdateInfo, onDismiss: () -> Unit, onSkip: (() -> Unit)? 
     AlertDialog(
         onDismissRequest = { if (!downloading) onDismiss() },
         icon = { Icon(Icons.Rounded.SystemUpdate, contentDescription = null) },
-        title = { Text("새 버전 ${info.versionName}") },
+        title = { Text(stringResource(R.string.update_title, info.versionName)) },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 when (val s = step) {
                     Step.Prompt -> {
-                        Text("지금 버전: ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.update_current, BuildConfig.VERSION_NAME), style = MaterialTheme.typography.bodySmall)
                         if (info.notes.isNotBlank()) {
                             Text(
                                 info.notes,
@@ -85,7 +87,7 @@ fun UpdateDialog(info: UpdateInfo, onDismiss: () -> Unit, onSkip: (() -> Unit)? 
                         }
                     }
                     is Step.Downloading -> {
-                        Text("내려받는 중…")
+                        Text(stringResource(R.string.update_downloading))
                         if (s.progress == null) {
                             LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 12.dp))
                         } else {
@@ -95,10 +97,7 @@ fun UpdateDialog(info: UpdateInfo, onDismiss: () -> Unit, onSkip: (() -> Unit)? 
                             )
                         }
                     }
-                    is Step.NeedsPermission -> Text(
-                        "업데이트를 설치하려면 WakeLink에 '출처를 알 수 없는 앱 설치' 권한을 한 번 허용해야 해요. " +
-                            "허용하고 돌아오면 바로 설치 화면이 열려요."
-                    )
+                    is Step.NeedsPermission -> Text(stringResource(R.string.update_needs_permission))
                     is Step.Failed -> Text(s.message, color = MaterialTheme.colorScheme.error)
                 }
             }
@@ -112,12 +111,12 @@ fun UpdateDialog(info: UpdateInfo, onDismiss: () -> Unit, onSkip: (() -> Unit)? 
                             val apk = AppUpdater.download(context, info) { p -> step = Step.Downloading(p) }
                             installOrAskPermission(apk)
                         } catch (e: Exception) {
-                            step = Step.Failed("내려받지 못했어요: ${e.message ?: "알 수 없는 오류"}")
+                            step = Step.Failed(context.getString(R.string.update_download_failed, e.message ?: context.getString(R.string.common_unknown_error)))
                         }
                     }
-                }) { Text(if (s is Step.Failed) "다시 시도" else "업데이트") }
+                }) { Text(stringResource(if (s is Step.Failed) R.string.update_retry else R.string.update_install)) }
                 is Step.NeedsPermission -> TextButton(onClick = { AppUpdater.openInstallPermissionSettings(context) }) {
-                    Text("권한 허용하러 가기")
+                    Text(stringResource(R.string.update_grant_permission))
                 }
                 is Step.Downloading -> {}
             }
@@ -126,9 +125,9 @@ fun UpdateDialog(info: UpdateInfo, onDismiss: () -> Unit, onSkip: (() -> Unit)? 
             if (!downloading) {
                 Row {
                     if (onSkip != null && step == Step.Prompt) {
-                        TextButton(onClick = onSkip) { Text("건너뛰기") }
+                        TextButton(onClick = onSkip) { Text(stringResource(R.string.update_skip)) }
                     }
-                    TextButton(onClick = onDismiss) { Text("나중에") }
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.update_later)) }
                 }
             }
         },

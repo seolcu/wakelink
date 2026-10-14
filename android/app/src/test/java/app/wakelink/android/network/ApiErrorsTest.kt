@@ -1,8 +1,9 @@
 package app.wakelink.android.network
 
+import app.wakelink.android.R
+import app.wakelink.android.ui.UiText
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ApiErrorsTest {
@@ -17,17 +18,17 @@ class ApiErrorsTest {
 
     @Test
     fun distinguishesCasesThatShareAStatusCode() {
-        assertTrue(userMessageFor(429, "daily trigger limit reached").contains("횟수"))
-        assertTrue(userMessageFor(429, "cooldown active, try again shortly").contains("잠시 후"))
-        assertTrue(userMessageFor(409, "invite already used").contains("이미 사용된"))
-        assertTrue(userMessageFor(409, "already paired").contains("이미 연결된"))
-        assertTrue(userMessageFor(400, "cannot pair with yourself").contains("내가 만든"))
+        assertEquals(UiText(R.string.error_daily_cap), userMessageFor(429, "daily trigger limit reached"))
+        assertEquals(UiText(R.string.error_cooldown), userMessageFor(429, "cooldown active, try again shortly"))
+        assertEquals(UiText(R.string.error_invite_used), userMessageFor(409, "invite already used"))
+        assertEquals(UiText(R.string.error_already_paired), userMessageFor(409, "already paired"))
+        assertEquals(UiText(R.string.error_self_pair), userMessageFor(400, "cannot pair with yourself"))
     }
 
     @Test
     fun coversTransportAndUnknownFailures() {
-        assertTrue(userMessageFor(null, null).contains("네트워크"))
-        assertTrue(userMessageFor(503, null).contains("서버 오류"))
-        assertEquals("요청에 실패했어요 (HTTP 418)", userMessageFor(418, null))
+        assertEquals(UiText(R.string.error_network), userMessageFor(null, null))
+        assertEquals(UiText(R.string.error_server), userMessageFor(503, null))
+        assertEquals(UiText(R.string.error_http_status, listOf(418)), userMessageFor(418, null))
     }
 }

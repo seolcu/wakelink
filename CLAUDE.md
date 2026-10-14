@@ -75,7 +75,16 @@ cp app/google-services.json.example app/google-services.json
 
 `app/src/test` holds plain-JVM unit tests for the pure logic (invite-link
 parsing, API error mapping, ack-status judgement) -- keep that logic free
-of Android framework types so it stays testable there. There is no
+of Android framework types so it stays testable there. Such logic returns
+string resource ids (`@StringRes Int`, or `ui/UiText` when it needs format
+args) rather than text; the UI resolves them.
+
+The app is localized: all user-facing text lives in
+`res/values/strings.xml` (English -- the default and the fallback for
+unsupported languages) and `res/values-ko/strings.xml` (Korean). Never
+hardcode UI text in Kotlin; add every new string to both files.
+`generateLocaleConfig` exposes both languages in Android 13+'s per-app
+language setting. There is no
 instrumented (on-device) test suite; anything touching audio, DND,
 notifications or the lock screen has to be checked on a real phone.
 
@@ -200,7 +209,12 @@ holds all HTTP handlers plus the bearer-token auth middleware
 so limits survive process restarts for free at this project's scale.
 
 `server/internal/web` is the public website, embedded with `go:embed`
-(Korean, no build step): the landing page at `/`, the `/invite/{code}`
+(no build step), in Korean and English: `templates/<lang>/*.html` share
+`templates/base.html`, and `lang.go` picks the language per request
+(`?lang=` link, then the `lang` cookie it sets, then `Accept-Language`;
+English for anything else). Keep the two languages' pages in sync, and
+their app mockups in sync with the app's real strings. It serves the
+landing page at `/`, the `/invite/{code}`
 page behind shared invite links (format check only, never a DB lookup),
 `/assets/*`, `robots.txt`, and `/.well-known/assetlinks.json`, which
 vouches for the release key (`ANDROID_CERT_SHA256`, defaults to the

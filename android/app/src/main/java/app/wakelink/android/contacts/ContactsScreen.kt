@@ -59,8 +59,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import app.wakelink.android.R
 import app.wakelink.android.data.SettingsRepository
 import app.wakelink.android.data.TokenStore
 import app.wakelink.android.network.ApiClient
@@ -120,7 +122,7 @@ fun ContactsScreen(onOpenPairing: () -> Unit, onOpenSettings: () -> Unit) {
             pairings = api.listPairings()
             loadError = null
         } catch (e: Exception) {
-            loadError = "목록을 불러오지 못했어요: ${e.toUserMessage()}"
+            loadError = context.getString(R.string.contacts_load_failed, e.toUserMessage(context))
         } finally {
             loading = false
         }
@@ -133,9 +135,9 @@ fun ContactsScreen(onOpenPairing: () -> Unit, onOpenSettings: () -> Unit) {
             val readiness = DeviceReadiness.check(context)
             val armed = SettingsRepository(context).armed.first()
             warnings.clear()
-            if (!armed) warnings += "WakeLink가 비활성화되어 있어 아무도 나를 깨울 수 없어요"
-            if (!readiness.notificationsEnabled) warnings += "알림이 꺼져 있어 깨우기 알람이 제대로 표시되지 않을 수 있어요"
-            if (!readiness.fullScreenIntentAllowed) warnings += "전체 화면 알림 권한이 없어 잠금 화면에 알람 화면이 뜨지 않아요"
+            if (!armed) warnings += context.getString(R.string.contacts_warning_disarmed)
+            if (!readiness.notificationsEnabled) warnings += context.getString(R.string.contacts_warning_notifications)
+            if (!readiness.fullScreenIntentAllowed) warnings += context.getString(R.string.contacts_warning_full_screen)
         }
     }
 
@@ -146,10 +148,10 @@ fun ContactsScreen(onOpenPairing: () -> Unit, onOpenSettings: () -> Unit) {
                 title = { Text("WakeLink", style = MaterialTheme.typography.titleLarge) },
                 actions = {
                     IconButton(onClick = { scope.launch { reload() } }) {
-                        Icon(Icons.Rounded.Refresh, contentDescription = "새로고침")
+                        Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.contacts_refresh))
                     }
                     IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Rounded.Settings, contentDescription = "설정")
+                        Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.common_settings))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
@@ -159,7 +161,7 @@ fun ContactsScreen(onOpenPairing: () -> Unit, onOpenSettings: () -> Unit) {
             ExtendedFloatingActionButton(
                 onClick = onOpenPairing,
                 icon = { Icon(Icons.Rounded.PersonAdd, contentDescription = null) },
-                text = { Text("연락처 추가") },
+                text = { Text(stringResource(R.string.contacts_add)) },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
             )
@@ -217,7 +219,7 @@ private fun WarningsBanner(warnings: List<String>, onOpenSettings: () -> Unit) {
             Icon(Icons.Rounded.WarningAmber, contentDescription = null)
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 warnings.forEach { Text(it, style = MaterialTheme.typography.bodyMedium) }
-                Text("탭해서 설정 열기", style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.contacts_warning_tap), style = MaterialTheme.typography.labelMedium)
             }
         }
     }
@@ -231,9 +233,9 @@ private fun EmptyState(onOpenPairing: () -> Unit) {
         modifier = Modifier.fillMaxWidth().padding(top = 72.dp, start = 16.dp, end = 16.dp),
     ) {
         SunriseMark(size = 96.dp, sun = MaterialTheme.colorScheme.secondary)
-        Text("아직 연결된 사람이 없어요", style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.contacts_empty_title), style = MaterialTheme.typography.titleLarge)
         Text(
-            "초대 코드를 주고받으면 서로 깨울 수 있어요.\n각자 언제든 끄거나 연결을 끊을 수 있어요.",
+            stringResource(R.string.contacts_empty_body),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -241,13 +243,14 @@ private fun EmptyState(onOpenPairing: () -> Unit) {
         Button(onClick = onOpenPairing, modifier = Modifier.padding(top = 8.dp)) {
             Icon(Icons.Rounded.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.size(8.dp))
-            Text("첫 연락처 추가하기")
+            Text(stringResource(R.string.contacts_add_first))
         }
     }
 }
 
 @Composable
 private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, onChanged: () -> Unit) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var wakeStatus by remember { mutableStateOf<WakeStatus?>(null) }
     var waking by remember { mutableStateOf(false) }
@@ -272,18 +275,18 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(pairing.otherUserName, style = MaterialTheme.typography.titleMedium)
                     Text(
-                        pairingSummary(pairing.iCanWakeThem, pairing.theyCanWakeMe),
+                        stringResource(pairingSummary(pairing.iCanWakeThem, pairing.theyCanWakeMe)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Box {
                     IconButton(onClick = { menuOpen = true }) {
-                        Icon(Icons.Rounded.MoreVert, contentDescription = "${pairing.otherUserName} 메뉴")
+                        Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.contacts_menu, pairing.otherUserName))
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                         DropdownMenuItem(
-                            text = { Text(if (pairing.iCanWakeThem) "내 깨우기 끄기" else "내 깨우기 켜기") },
+                            text = { Text(stringResource(if (pairing.iCanWakeThem) R.string.contacts_my_wake_off else R.string.contacts_my_wake_on)) },
                             leadingIcon = {
                                 Icon(if (pairing.iCanWakeThem) Icons.Rounded.NotificationsOff else Icons.Rounded.Alarm, null)
                             },
@@ -293,14 +296,14 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
                                     try {
                                         api.patchPairing(pairing.id, PatchPairingRequest(iCanWakeThem = !pairing.iCanWakeThem)).orThrow()
                                     } catch (e: Exception) {
-                                        wakeStatus = WakeStatus(StatusKind.ERROR, "설정 변경 실패: ${e.toUserMessage()}")
+                                        wakeStatus = WakeStatus(StatusKind.ERROR, context.getString(R.string.contacts_setting_failed, e.toUserMessage(context)))
                                     }
                                     onChanged()
                                 }
                             },
                         )
                         DropdownMenuItem(
-                            text = { Text("연결 끊기", color = MaterialTheme.colorScheme.error) },
+                            text = { Text(stringResource(R.string.contacts_unpair), color = MaterialTheme.colorScheme.error) },
                             leadingIcon = { Icon(Icons.Rounded.LinkOff, null, tint = MaterialTheme.colorScheme.error) },
                             onClick = {
                                 menuOpen = false
@@ -320,24 +323,24 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 onClick = {
                     waking = true
-                    wakeStatus = WakeStatus(StatusKind.PROGRESS, "보내는 중…")
+                    wakeStatus = WakeStatus(StatusKind.PROGRESS, context.getString(R.string.contacts_sending))
                     scope.launch {
                         try {
                             val triggerId = try {
                                 api.trigger(pairing.id).triggerId
                             } catch (e: Exception) {
-                                wakeStatus = WakeStatus(StatusKind.ERROR, "전송 실패: ${e.toUserMessage()}")
+                                wakeStatus = WakeStatus(StatusKind.ERROR, context.getString(R.string.contacts_send_failed, e.toUserMessage(context)))
                                 return@launch
                             }
                             // Sent is not rang: keep the user waiting on the
                             // receiver's ack before claiming success.
-                            wakeStatus = WakeStatus(StatusKind.PROGRESS, "${pairing.otherUserName}님 폰에서 울리는지 확인 중…")
+                            wakeStatus = WakeStatus(StatusKind.PROGRESS, context.getString(R.string.contacts_checking, pairing.otherUserName))
                             wakeStatus = when (awaitAck(api, pairing.id, triggerId)) {
-                                AckCheck.ACKED -> WakeStatus(StatusKind.SUCCESS, "${pairing.otherUserName}님 폰에서 알람이 울리고 있어요")
-                                AckCheck.FAILED -> WakeStatus(StatusKind.ERROR, "푸시 전달에 실패했어요")
+                                AckCheck.ACKED -> WakeStatus(StatusKind.SUCCESS, context.getString(R.string.contacts_ringing, pairing.otherUserName))
+                                AckCheck.FAILED -> WakeStatus(StatusKind.ERROR, context.getString(R.string.contacts_push_failed))
                                 AckCheck.PENDING -> WakeStatus(
                                     StatusKind.WARNING,
-                                    "전송은 됐지만 울렸는지 확인되지 않았어요. 상대 폰이 꺼져 있거나 오프라인일 수 있어요",
+                                    context.getString(R.string.contacts_unconfirmed),
                                 )
                             }
                             if (showHistory) loadHistory()
@@ -349,7 +352,7 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
             ) {
                 Icon(Icons.Rounded.Alarm, contentDescription = null)
                 Spacer(Modifier.size(8.dp))
-                Text(if (pairing.iCanWakeThem) "깨우기" else "깨우기 꺼져 있음", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(if (pairing.iCanWakeThem) R.string.contacts_wake else R.string.contacts_wake_off), style = MaterialTheme.typography.titleMedium)
             }
 
             wakeStatus?.let { StatusPill(it.kind, it.text, Modifier.fillMaxWidth()) }
@@ -366,24 +369,24 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
                     .padding(vertical = 2.dp),
             ) {
                 Text(
-                    "최근 기록",
+                    stringResource(R.string.contacts_history),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
                 )
                 Icon(
                     if (showHistory) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
-                    contentDescription = if (showHistory) "기록 숨기기" else "기록 보기",
+                    contentDescription = stringResource(if (showHistory) R.string.contacts_history_hide else R.string.contacts_history_show),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             AnimatedVisibility(visible = showHistory) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     when (val h = history) {
-                        null -> Text("불러오는 중…", style = MaterialTheme.typography.bodySmall)
+                        null -> Text(stringResource(R.string.common_loading), style = MaterialTheme.typography.bodySmall)
                         else -> if (h.isEmpty()) {
                             Text(
-                                "아직 기록이 없어요",
+                                stringResource(R.string.contacts_history_empty),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -400,8 +403,8 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
         AlertDialog(
             onDismissRequest = { confirmUnpair = false },
             icon = { Icon(Icons.Rounded.LinkOff, contentDescription = null) },
-            title = { Text("${pairing.otherUserName}님과 연결 끊기") },
-            text = { Text("서로 더 이상 깨울 수 없게 되고 기록도 삭제돼요. 다시 연결하려면 초대 코드를 새로 주고받아야 해요.") },
+            title = { Text(stringResource(R.string.contacts_unpair_title, pairing.otherUserName)) },
+            text = { Text(stringResource(R.string.contacts_unpair_body)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmUnpair = false
@@ -409,13 +412,13 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
                         try {
                             api.deletePairing(pairing.id).orThrow()
                         } catch (e: Exception) {
-                            wakeStatus = WakeStatus(StatusKind.ERROR, "연결 끊기 실패: ${e.toUserMessage()}")
+                            wakeStatus = WakeStatus(StatusKind.ERROR, context.getString(R.string.contacts_unpair_failed, e.toUserMessage(context)))
                         }
                         onChanged()
                     }
-                }) { Text("연결 끊기", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.contacts_unpair), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { confirmUnpair = false }) { Text("취소") } },
+            dismissButton = { TextButton(onClick = { confirmUnpair = false }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
 }
@@ -435,6 +438,10 @@ private fun HistoryRow(t: TriggerView, myUserId: Long) {
             tint = tint,
             modifier = Modifier.size(18.dp),
         )
-        Text(historyLine(t, myUserId), style = MaterialTheme.typography.bodySmall)
+        val line = historyLine(t, myUserId)
+        Text(
+            stringResource(R.string.history_line, line.time, stringResource(line.direction), stringResource(line.outcome)),
+            style = MaterialTheme.typography.bodySmall,
+        )
     }
 }

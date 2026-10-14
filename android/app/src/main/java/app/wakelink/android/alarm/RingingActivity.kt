@@ -50,10 +50,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import app.wakelink.android.R
 import app.wakelink.android.data.DismissMode
 import app.wakelink.android.data.SettingsRepository
 import app.wakelink.android.ui.theme.Dawn
@@ -211,7 +213,7 @@ private fun RingingScreen(
                     textAlign = TextAlign.Center,
                 )
                 Text(
-                    "님이 깨우고 있어요",
+                    stringResource(R.string.ringing_subtitle),
                     color = Color.White.copy(alpha = 0.8f),
                     style = MaterialTheme.typography.titleMedium,
                 )
@@ -226,7 +228,7 @@ private fun RingingScreen(
             ) {
                 Icon(if (unlockFirst) Icons.Rounded.LockOpen else Icons.Rounded.AlarmOff, contentDescription = null)
                 Spacer(Modifier.size(10.dp))
-                Text(if (unlockFirst) "잠금 해제하고 알람 끄기" else "알람 끄기", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(if (unlockFirst) R.string.ringing_unlock_stop else R.string.ringing_stop), style = MaterialTheme.typography.titleMedium)
             }
             Spacer(Modifier.height(16.dp))
         }

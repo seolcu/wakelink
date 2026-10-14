@@ -1,5 +1,6 @@
 package app.wakelink.android.contacts
 
+import app.wakelink.android.R
 import app.wakelink.android.network.TriggerView
 import java.time.ZoneOffset
 import org.junit.Assert.assertEquals
@@ -35,8 +36,17 @@ class TriggerAckTest {
     @Test
     fun historyLineIsFromMyPointOfView() {
         // 1_700_000_000 = 2023-11-14 22:13:20 UTC
-        assertEquals("11/14 22:13 · 내가 깨움 · 울림 확인됨", historyLine(trigger(1, ack = 1), myUserId = 1, zone = ZoneOffset.UTC))
-        assertEquals("11/14 22:13 · 상대가 나를 깨움 · 울림 미확인", historyLine(trigger(1, from = 2), myUserId = 1, zone = ZoneOffset.UTC))
-        assertEquals("11/14 22:13 · 내가 깨움 · 전달 실패", historyLine(trigger(1, status = "fcm_error"), myUserId = 1, zone = ZoneOffset.UTC))
+        assertEquals(
+            HistoryLine("11/14 22:13", R.string.history_outgoing, R.string.history_acked),
+            historyLine(trigger(1, ack = 1), myUserId = 1, zone = ZoneOffset.UTC),
+        )
+        assertEquals(
+            HistoryLine("11/14 22:13", R.string.history_incoming, R.string.history_unconfirmed),
+            historyLine(trigger(1, from = 2), myUserId = 1, zone = ZoneOffset.UTC),
+        )
+        assertEquals(
+            HistoryLine("11/14 22:13", R.string.history_outgoing, R.string.history_failed),
+            historyLine(trigger(1, status = "fcm_error"), myUserId = 1, zone = ZoneOffset.UTC),
+        )
     }
 }

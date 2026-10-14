@@ -41,7 +41,3 @@ fun formatRemaining(seconds: Long): String {
 /** The shareable https invite link for [code] on the server at [serverBaseUrl]. */
 fun inviteWebLink(serverBaseUrl: String, code: String): String = serverBaseUrl.trimEnd('/') + "/invite/" + code
 
-fun inviteShareText(code: String, webLink: String): String =
-    "WakeLink 초대 코드: $code\n" +
-        "이 링크를 누르면 앱이 열리고, 앱이 없으면 설치 방법이 나와요: $webLink\n" +
-        "(코드는 잠시 후 만료돼요)"

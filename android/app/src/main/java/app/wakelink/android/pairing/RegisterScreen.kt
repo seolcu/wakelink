@@ -26,8 +26,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import app.wakelink.android.R
 import app.wakelink.android.data.TokenStore
 import app.wakelink.android.fcm.currentFcmToken
 import app.wakelink.android.network.ApiClient
@@ -60,7 +62,7 @@ fun RegisterScreen(onRegistered: () -> Unit) {
                 tokenStore.save(response.userId, response.apiKey)
                 onRegistered()
             } catch (e: Exception) {
-                error = "등록 실패: ${e.toUserMessage()}"
+                error = context.getString(R.string.register_failed, e.toUserMessage(context))
             } finally {
                 busy = false
             }
@@ -74,7 +76,7 @@ fun RegisterScreen(onRegistered: () -> Unit) {
         SunriseMark(size = 72.dp)
         Text("WakeLink", style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.primary)
         Text(
-            "알람을 깜빡한 날, 믿는 사람이 대신 깨워줘요. 무음 모드여도 울려요.",
+            stringResource(R.string.register_tagline),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -85,9 +87,9 @@ fun RegisterScreen(onRegistered: () -> Unit) {
             value = displayName,
             onValueChange = { displayName = it.take(MAX_DISPLAY_NAME_LENGTH) },
             singleLine = true,
-            label = { Text("내 이름") },
+            label = { Text(stringResource(R.string.register_name_label)) },
             supportingText = {
-                Text(error ?: "연결된 사람에게만 보여요 · ${displayName.length}/$MAX_DISPLAY_NAME_LENGTH")
+                Text(error ?: stringResource(R.string.register_name_hint, displayName.length, MAX_DISPLAY_NAME_LENGTH))
             },
             isError = error != null,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
@@ -102,7 +104,7 @@ fun RegisterScreen(onRegistered: () -> Unit) {
             if (busy) {
                 CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(20.dp).align(Alignment.CenterVertically))
             } else {
-                Text("시작하기")
+                Text(stringResource(R.string.register_start))
             }
         }
     }

@@ -49,12 +49,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.wakelink.android.BuildConfig
+import app.wakelink.android.R
 import app.wakelink.android.data.TokenStore
 import app.wakelink.android.network.AcceptInviteRequest
 import app.wakelink.android.network.ApiClient
@@ -107,7 +109,7 @@ fun PairingScreen(initialCode: String?, onDone: () -> Unit) {
                 issuedAt = System.currentTimeMillis() / 1000
                 nowSeconds = issuedAt
             } catch (e: Exception) {
-                createError = "코드 생성 실패: ${e.toUserMessage()}"
+                createError = context.getString(R.string.pairing_create_failed, e.toUserMessage(context))
             } finally {
                 creating = false
             }
@@ -118,9 +120,9 @@ fun PairingScreen(initialCode: String?, onDone: () -> Unit) {
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("연락처 추가") },
+                title = { Text(stringResource(R.string.pairing_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "뒤로") }
+                    IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back)) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
@@ -135,13 +137,13 @@ fun PairingScreen(initialCode: String?, onDone: () -> Unit) {
                 .padding(start = 16.dp, end = 16.dp, bottom = 32.dp),
         ) {
             Text(
-                "한 사람이 코드를 만들고 다른 사람이 입력하면 연결돼요. 연결되면 서로 깨울 수 있고, 언제든 끊을 수 있어요.",
+                stringResource(R.string.pairing_intro),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 4.dp),
             )
 
-            PairingSection(title = "내 초대 코드 보내기", step = "A") {
+            PairingSection(title = stringResource(R.string.pairing_send_section), step = "A") {
                 val current = invite
                 val remaining = current?.let { it.expiresAt - nowSeconds } ?: 0
                 if (current != null && remaining > 0) {
@@ -154,7 +156,7 @@ fun PairingScreen(initialCode: String?, onDone: () -> Unit) {
                         modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                     )
                     Text(
-                        "${formatRemaining(remaining)} 후 만료",
+                        stringResource(R.string.pairing_expires_in, formatRemaining(remaining)),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -165,30 +167,30 @@ fun PairingScreen(initialCode: String?, onDone: () -> Unit) {
                                 val send = Intent(Intent.ACTION_SEND).apply {
                                     type = "text/plain"
                                     val link = inviteWebLink(BuildConfig.DEFAULT_SERVER_BASE_URL, current.pairingCode)
-                                    putExtra(Intent.EXTRA_TEXT, inviteShareText(current.pairingCode, link))
+                                    putExtra(Intent.EXTRA_TEXT, context.getString(R.string.pairing_share_text, current.pairingCode, link))
                                 }
-                                context.startActivity(Intent.createChooser(send, "초대 코드 보내기"))
+                                context.startActivity(Intent.createChooser(send, context.getString(R.string.pairing_share_chooser)))
                             },
                         ) {
                             Icon(Icons.Rounded.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.size(8.dp))
-                            Text("공유")
+                            Text(stringResource(R.string.pairing_share))
                         }
                         OutlinedButton(
                             modifier = Modifier.weight(1f),
                             onClick = {
                                 clipboard.setText(AnnotatedString(current.pairingCode))
-                                Toast.makeText(context, "코드를 복사했어요", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, R.string.pairing_copied, Toast.LENGTH_SHORT).show()
                             },
                         ) {
                             Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.size(8.dp))
-                            Text("복사")
+                            Text(stringResource(R.string.common_copy))
                         }
                     }
                 } else {
                     Text(
-                        if (current != null) "코드가 만료되었어요. 새로 만들어 주세요." else "코드는 10분 동안, 한 번만 쓸 수 있어요.",
+                        stringResource(if (current != null) R.string.pairing_code_expired else R.string.pairing_code_rules),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -196,18 +198,18 @@ fun PairingScreen(initialCode: String?, onDone: () -> Unit) {
                         if (creating) {
                             CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
                         } else {
-                            Text(if (current == null) "초대 코드 만들기" else "새 코드 만들기")
+                            Text(stringResource(if (current == null) R.string.pairing_create else R.string.pairing_create_new))
                         }
                     }
                 }
                 createError?.let { StatusPill(StatusKind.ERROR, it, Modifier.fillMaxWidth()) }
             }
 
-            PairingSection(title = "받은 코드 입력하기", step = "B") {
+            PairingSection(title = stringResource(R.string.pairing_enter_section), step = "B") {
                 if (initialCode != null) {
                     StatusPill(
                         StatusKind.INFO,
-                        "초대 링크로 받은 코드예요. 아는 사람이 보낸 게 맞는지 확인한 뒤 연결해 주세요.",
+                        stringResource(R.string.pairing_link_notice),
                         Modifier.fillMaxWidth(),
                     )
                 }
@@ -215,8 +217,8 @@ fun PairingScreen(initialCode: String?, onDone: () -> Unit) {
                     value = enteredCode,
                     onValueChange = { enteredCode = normalizeInviteCode(it) },
                     singleLine = true,
-                    label = { Text("초대 코드") },
-                    placeholder = { Text("예: AB23CD45") },
+                    label = { Text(stringResource(R.string.pairing_code_label)) },
+                    placeholder = { Text(stringResource(R.string.pairing_code_placeholder)) },
                     leadingIcon = { Icon(Icons.Rounded.Link, contentDescription = null) },
                     textStyle = MaterialTheme.typography.titleMedium.copy(fontFamily = FontFamily.Monospace, letterSpacing = 2.sp),
                     isError = acceptError != null,
@@ -236,10 +238,10 @@ fun PairingScreen(initialCode: String?, onDone: () -> Unit) {
                         scope.launch {
                             try {
                                 val res = api.acceptInvite(AcceptInviteRequest(pairingCode = enteredCode))
-                                Toast.makeText(context, "${res.pairedWithName}님과 연결되었어요", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.pairing_connected, res.pairedWithName), Toast.LENGTH_SHORT).show()
                                 onDone()
                             } catch (e: Exception) {
-                                acceptError = e.toUserMessage()
+                                acceptError = e.toUserMessage(context)
                             } finally {
                                 accepting = false
                             }
@@ -249,7 +251,7 @@ fun PairingScreen(initialCode: String?, onDone: () -> Unit) {
                     if (accepting) {
                         CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
                     } else {
-                        Text("연결하기")
+                        Text(stringResource(R.string.pairing_connect))
                     }
                 }
             }
