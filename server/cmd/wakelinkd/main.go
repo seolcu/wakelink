@@ -19,6 +19,7 @@ import (
 	"wakelink/internal/fcm"
 	"wakelink/internal/metrics"
 	"wakelink/internal/ratelimit"
+	"wakelink/internal/web"
 )
 
 func main() {
@@ -51,6 +52,14 @@ func main() {
 	if downloadURL == "-" {
 		downloadURL = ""
 	}
+	// SHA-256 of the release signing certificate, published in
+	// /.well-known/assetlinks.json so the app can open https invite links.
+	certSHA256 := getenv("ANDROID_CERT_SHA256", "C3:CC:93:17:E8:8B:60:BC:E7:E1:D5:1C:D2:A3:60:B2:89:94:7D:72:6A:54:B1:52:B5:B8:44:11:13:75:35:71")
+	if certSHA256 == "-" {
+		certSHA256 = ""
+	} else if certSHA256, err = web.NormalizeFingerprint(certSHA256); err != nil {
+		log.Fatalf("ANDROID_CERT_SHA256: %v", err)
+	}
 
 	database, err := db.Open(dbPath)
 	if err != nil {
@@ -75,6 +84,15 @@ func main() {
 		sender = realSender
 	}
 
+	downloadHref := "/download"
+	if downloadURL == "" {
+		downloadHref = "https://github.com/seolcu/wakelink/releases/latest"
+	}
+	site, err := web.New(web.Config{DownloadHref: downloadHref, CertSHA256: certSHA256})
+	if err != nil {
+		log.Fatalf("load web site: %v", err)
+	}
+
 	server := &api.Server{
 		DB:  database,
 		FCM: sender,
@@ -87,6 +105,7 @@ func main() {
 		Version:     "dev",
 		StartedAt:   time.Now(),
 		DownloadURL: downloadURL,
+		Site:        site,
 	}
 
 	httpServer := &http.Server{

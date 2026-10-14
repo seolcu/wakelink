@@ -1,0 +1,37 @@
+{{define "base"}}<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{template "title" .}}</title>
+<meta name="description" content="{{template "description" .}}">
+<meta name="theme-color" content="#0E1324">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="WakeLink">
+<meta property="og:title" content="{{template "title" .}}">
+<meta property="og:description" content="{{template "description" .}}">
+<meta property="og:image" content="{{.Origin}}/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+{{template "content" .}}
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <a class="brand brand-small" href="/"><img src="/assets/logo.svg" alt="" width="28" height="28">WakeLink</a>
+    <nav class="footer-links">
+      <a href="https://github.com/seolcu/wakelink">GitHub</a>
+      <a href="https://github.com/seolcu/wakelink/releases">릴리스 노트</a>
+      <a href="https://github.com/seolcu/wakelink/blob/master/docs/self-hosting.md">직접 호스팅</a>
+    </nav>
+    <p class="footer-note">MIT 라이선스 오픈소스 · Android 전용</p>
+  </div>
+</footer>
+</body>
+</html>{{end}}

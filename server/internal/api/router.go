@@ -20,6 +20,9 @@ func (s *Server) Router() http.Handler {
 		r.Get("/download", s.handleDownload)
 	}
 	r.Post("/v1/register", s.handleRegister)
+	if s.Site != nil {
+		s.Site.Mount(r)
+	}
 
 	r.Group(func(r chi.Router) {
 		r.Use(s.requireAuth)

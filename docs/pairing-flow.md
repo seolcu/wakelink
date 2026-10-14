@@ -33,10 +33,16 @@ Notes:
   revoked by the user who owns that direction (`PATCH /v1/pairings/{id}`),
   and either side can delete the pairing outright
   (`DELETE /v1/pairings/{id}`) at any time.
-- Instead of typing the code, A can share a `wakelink://invite/CODE` link
-  from the app's share sheet. Opening it only pre-fills the code on B's
-  pairing screen -- B still has to press "connect", so the link alone
-  never pairs anyone.
+- Instead of typing the code, A can share an
+  `https://wake.seolcu.com/invite/CODE` link from the app's share sheet
+  (clickable in messengers, unlike the older `wakelink://invite/CODE`
+  form, which still works). With the app installed, Android App Links
+  open it straight in the app; otherwise it shows a web page with the
+  code, an "open in app" button and install instructions. The web page
+  never looks the code up, so it reveals neither whether the code is
+  valid nor who issued it. Either way the link only pre-fills the code on
+  B's pairing screen -- B still has to press "connect", so the link
+  alone never pairs anyone.
 - Deleting a pairing also deletes its trigger history. Deleting an
   account (`DELETE /v1/me`) deletes every pairing it was part of, so no
   former contact can wake that device again.

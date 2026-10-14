@@ -167,9 +167,11 @@ delete the pairing outright, independently. `db.Pairing.CanWake()` is the
 single source of truth for permission checks -- `handleTrigger` in
 `server/internal/api/trigger.go` is the only caller that matters.
 
-A `wakelink://invite/CODE` link only *pre-fills* the code on the pairing
-screen (`MainActivity.pendingInviteCode`); never make it auto-accept, or a
-link alone could pair someone without their explicit action.
+A `wakelink://invite/CODE` or `https://<server>/invite/CODE` link only
+*pre-fills* the code on the pairing screen
+(`MainActivity.pendingInviteCode`, parsed by `parseInviteCode`); never make
+it auto-accept, or a link alone could pair someone without their explicit
+action. The app shares the https form (`inviteWebLink`).
 
 `/v1/me` (GET/PATCH/DELETE) covers the account: display name (validated by
 `normalizeDisplayName`, max 40 runes -- mirrored by
@@ -196,6 +198,18 @@ holds all HTTP handlers plus the bearer-token auth middleware
 `server/internal/ratelimit` re-derives cooldown/daily-cap state from the
 `triggers` table on every check rather than keeping in-memory counters,
 so limits survive process restarts for free at this project's scale.
+
+`server/internal/web` is the public website, embedded with `go:embed`
+(Korean, no build step): the landing page at `/`, the `/invite/{code}`
+page behind shared invite links (format check only, never a DB lookup),
+`/assets/*`, `robots.txt`, and `/.well-known/assetlinks.json`, which
+vouches for the release key (`ANDROID_CERT_SHA256`, defaults to the
+upstream key) so the app's `autoVerify` intent filter for
+`https://<inviteHost>/invite/` opens links directly. Signing with a new key
+means updating that fingerprint too. Pages send a strict CSP
+(`script-src 'self'`, no inline styles/scripts -- keep it that way).
+`assets/og.png` (link-preview image) and the PNG icons are rendered from
+`assets/logo.svg`; regenerate them if the mark changes.
 
 ### Self-hosting constraint (read before touching `DEFAULT_SERVER_BASE_URL` or FCM)
 

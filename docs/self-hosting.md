@@ -46,6 +46,9 @@ end to end:
    updater off), and set `APK_DOWNLOAD_URL` in the server's `.env` --
    otherwise your users get offered the maintainer's releases, which
    their phones will refuse to install over your differently-signed APK.
+   For https invite links to open your app, set `inviteHost` (same file)
+   to your server's host and `ANDROID_CERT_SHA256` in `.env` to your
+   signing certificate's SHA-256 fingerprint.
 6. Install that APK on both your and your contact's phones (sideload, or
    publish it yourself under your own Play Store listing / F-Droid, etc.).
 

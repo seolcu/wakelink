@@ -10,6 +10,7 @@ import (
 	"wakelink/internal/fcm"
 	"wakelink/internal/metrics"
 	"wakelink/internal/ratelimit"
+	"wakelink/internal/web"
 )
 
 type Server struct {
@@ -23,4 +24,7 @@ type Server struct {
 	// DownloadURL is where GET /download redirects (the latest APK); empty
 	// disables the route.
 	DownloadURL string
+	// Site serves the public web pages (landing, invite links,
+	// assetlinks.json); nil leaves them out.
+	Site *web.Site
 }

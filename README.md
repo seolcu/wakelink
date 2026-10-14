@@ -12,7 +12,8 @@ alarm, you can still wake them up.
 
 ## Install
 
-Download the latest APK: **<https://wake.seolcu.com/download>** (redirects to
+Website: **<https://wake.seolcu.com>**. Download the latest APK:
+**<https://wake.seolcu.com/download>** (redirects to
 [the newest GitHub release](https://github.com/seolcu/wakelink/releases/latest)).
 WakeLink isn't on the Play Store, so Android will ask you to allow
 installing apps from your browser or file manager once.

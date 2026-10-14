@@ -1,0 +1,187 @@
+{{define "title"}}WakeLink — 알람 못 들어도, 친구가 깨워줄게요{{end}}
+{{define "description"}}무음 모드여도 믿는 사람이 버튼 하나로 내 폰 알람을 울려 깨워주는 Android 앱. 서로 동의한 사람끼리만 연결돼요.{{end}}
+{{define "content"}}
+<header class="hero">
+  <div class="sky" aria-hidden="true">
+    <span class="star"></span><span class="star"></span>
+    <span class="star"></span><span class="star"></span>
+    <span class="star"></span><span class="star"></span>
+    <span class="star"></span><span class="star"></span>
+  </div>
+  <div class="wrap">
+    <nav class="topbar">
+      <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="36" height="36">WakeLink</a>
+      <a class="topbar-link" href="https://github.com/seolcu/wakelink">GitHub</a>
+    </nav>
+    <div class="hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow">알람 끄고 다시 잠든 친구에게</p>
+        <h1>알람 못 들어도,<br><span class="accent">친구가 깨워줄게요</span></h1>
+        <p class="lead">무음 모드여도 믿는 사람이 버튼 하나로 내 폰에서 큰 알람을 울려줘요. 진짜 울렸는지도 바로 확인돼요.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="{{.DownloadHref}}">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v9.59l3.3-3.3a1 1 0 1 1 1.4 1.42l-5 5a1 1 0 0 1-1.4 0l-5-5a1 1 0 1 1 1.4-1.42l3.3 3.3V4a1 1 0 0 1 1-1ZM5 19a1 1 0 1 0 0 2h14a1 1 0 1 0 0-2H5Z"/></svg>
+            Android 앱 받기
+          </a>
+          <a class="btn btn-ghost" href="#how">어떻게 쓰나요?</a>
+        </div>
+        <p class="fineprint">Android 8.0 이상 · 무료 · 광고 없음 · 플레이 스토어 밖에서 설치하는 APK</p>
+      </div>
+
+      <div class="phones" aria-label="앱 화면 예시">
+        <div class="phone phone-back" aria-hidden="true">
+          <div class="screen screen-ringing">
+            <div class="ring-time">06:42</div>
+            <div class="ring-sun"><span></span></div>
+            <p class="ring-who"><b>지민</b>님이 깨우고 있어요</p>
+            <div class="ring-stop">알람 끄기</div>
+          </div>
+        </div>
+        <div class="phone phone-front">
+          <div class="screen screen-app">
+            <div class="app-bar"><span>WakeLink</span><span class="app-bar-icons" aria-hidden="true">⚙</span></div>
+            <div class="card">
+              <div class="card-row">
+                <span class="avatar avatar-1">지</span>
+                <div class="card-text"><b>지민</b><small>서로 깨울 수 있어요</small></div>
+              </div>
+              <div class="wake-btn">깨우기</div>
+              <div class="pill pill-ok">● 지민님 폰에서 알람이 울리고 있어요</div>
+            </div>
+            <div class="card">
+              <div class="card-row">
+                <span class="avatar avatar-3">엄</span>
+                <div class="card-text"><b>엄마</b><small>상대만 나를 깨울 수 있어요</small></div>
+              </div>
+              <div class="wake-btn wake-btn-off">깨우기 꺼져 있음</div>
+            </div>
+            <div class="card">
+              <div class="card-row">
+                <span class="avatar avatar-5">현</span>
+                <div class="card-text"><b>현우</b><small>서로 깨울 수 있어요</small></div>
+              </div>
+              <div class="wake-btn">깨우기</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="horizon" aria-hidden="true"></div>
+</header>
+
+<main>
+  <section class="section" id="how">
+    <div class="wrap">
+      <h2>세 단계면 끝</h2>
+      <ol class="steps">
+        <li class="step">
+          <span class="step-num">1</span>
+          <h3>둘 다 앱 설치</h3>
+          <p>이름만 정하면 돼요. 전화번호도, 이메일도 필요 없어요.</p>
+        </li>
+        <li class="step">
+          <span class="step-num">2</span>
+          <h3>초대 코드로 연결</h3>
+          <p>한 사람이 만든 코드를 다른 사람이 직접 입력해야 연결돼요. 링크로 보내도 돼요.</p>
+        </li>
+        <li class="step">
+          <span class="step-num">3</span>
+          <h3>깨우기 버튼 한 번</h3>
+          <p>상대 폰에서 알람이 크게 울리고, 실제로 울렸는지 내 화면에 바로 표시돼요.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="wrap split">
+      <div>
+        <h2>무음 모드여도 울리는 이유</h2>
+        <p>폰을 무음으로 해도 시계 앱 알람은 울리죠. 무음 모드는 벨소리와 알림 소리만 끄고 <b>알람 소리는 그대로 두기</b> 때문이에요.</p>
+        <p>WakeLink도 같은 알람 채널로 울려요. 그래서 특별한 권한 없이도 무음·진동 모드를 뚫고 깨울 수 있어요.</p>
+        <p class="muted">방해 금지 모드의 '완전 무음'은 알람까지 막아요. 이것까지 뚫고 싶다면 설정에서 직접 켤 수 있고, 울리는 동안만 바꿨다가 끝나면 원래대로 돌려놔요.</p>
+      </div>
+      <ul class="mode-list" aria-label="모드별 동작">
+        <li><span class="mode-name">소리 모드</span><span class="mode-yes">울려요</span></li>
+        <li><span class="mode-name">진동 모드</span><span class="mode-yes">울려요</span></li>
+        <li><span class="mode-name">무음 모드</span><span class="mode-yes">울려요</span></li>
+        <li><span class="mode-name">방해 금지 (알람 허용)</span><span class="mode-yes">울려요</span></li>
+        <li><span class="mode-name">방해 금지 '완전 무음'</span><span class="mode-opt">설정에서 켜면 울려요</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <h2>아무나 깨울 수 없게</h2>
+      <p class="section-lead">누군가를 깨우는 앱이라서, 동의와 통제권을 가장 먼저 생각했어요.</p>
+      <div class="features">
+        <div class="feature">
+          <h3>서로 동의해야 연결</h3>
+          <p>초대 코드를 받은 사람이 직접 입력해야만 연결돼요. 몰래 추가하는 방법은 없어요.</p>
+        </div>
+        <div class="feature">
+          <h3>방향별로 따로 허락</h3>
+          <p>"나는 깨울 수 있지만 상대는 나를 못 깨우게"처럼 각자 정할 수 있어요.</p>
+        </div>
+        <div class="feature">
+          <h3>언제든 끄거나 끊기</h3>
+          <p>앱 전체를 끄거나, 특정 사람만 막거나, 연결을 아예 끊을 수 있어요.</p>
+        </div>
+        <div class="feature">
+          <h3>켜져 있으면 항상 표시</h3>
+          <p>누가 나를 깨울 수 있는 상태인지 알림으로 늘 보여요. 숨겨서 쓰는 기능은 없어요.</p>
+        </div>
+        <div class="feature">
+          <h3>장난 방지</h3>
+          <p>같은 사람에게는 30초에 한 번, 24시간 동안 20번까지만 보낼 수 있어요.</p>
+        </div>
+        <div class="feature">
+          <h3>최소한의 정보만</h3>
+          <p>서버에는 표시 이름과 푸시 알림용 토큰만 저장돼요. 계정을 지우면 기록까지 모두 삭제돼요.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="wrap narrow">
+      <h2>자주 묻는 질문</h2>
+      <details class="faq">
+        <summary>아이폰에서도 쓸 수 있나요?</summary>
+        <p>아직은 Android만 지원해요. 깨우는 사람과 깨워지는 사람 모두 Android 폰에 앱이 있어야 해요.</p>
+      </details>
+      <details class="faq">
+        <summary>플레이 스토어에 없는데 설치해도 괜찮나요?</summary>
+        <p>위 버튼으로 받는 APK는 GitHub에 공개된 소스로 빌드되고, 늘 같은 키로 서명돼요. 처음 한 번 브라우저나 파일 앱에 "출처를 알 수 없는 앱 설치"를 허용하면 설치할 수 있어요.</p>
+      </details>
+      <details class="faq">
+        <summary>업데이트는 어떻게 하나요?</summary>
+        <p>앱을 열 때 새 버전이 있으면 알려줘요. 누르면 바로 내려받아 설치 화면이 열려요. 설정 → 앱 업데이트에서 직접 확인할 수도 있어요.</p>
+      </details>
+      <details class="faq">
+        <summary>배터리 절약 때문에 안 울리면 어떡하죠?</summary>
+        <p>설정의 "기기 준비 상태"에서 알림, 잠금 화면 전체 화면 알람, 배터리 최적화 제외를 확인할 수 있어요. 경고가 없으면 자는 동안에도 바로 받아요.</p>
+      </details>
+      <details class="faq">
+        <summary>깨우기를 보냈는데 상대 폰이 꺼져 있으면요?</summary>
+        <p>보낸 쪽 화면에 "울림 미확인"으로 표시돼요. 상대 폰에서 실제로 소리가 나기 시작해야만 "울림 확인됨"이 떠요.</p>
+      </details>
+      <details class="faq">
+        <summary>제 서버에서 직접 운영할 수 있나요?</summary>
+        <p>네. 서버와 앱 모두 MIT 라이선스 오픈소스예요. 다만 푸시 알림 구조상 서버만 바꿔서는 안 되고, 자신의 Firebase 프로젝트로 앱도 직접 빌드해야 해요. <a href="https://github.com/seolcu/wakelink/blob/master/docs/self-hosting.md">호스팅 안내</a>를 참고하세요.</p>
+      </details>
+    </div>
+  </section>
+
+  <section class="section final-cta">
+    <div class="wrap narrow center">
+      <img src="/assets/logo.svg" alt="" width="72" height="72">
+      <h2>내일 아침이 걱정된다면</h2>
+      <p>깨워줄 사람과 같이 설치해 두세요.</p>
+      <a class="btn btn-primary" href="{{.DownloadHref}}">Android 앱 받기</a>
+    </div>
+  </section>
+</main>
+{{end}}
