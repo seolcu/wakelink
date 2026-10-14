@@ -1,5 +1,7 @@
 # WakeLink
 
+**English** | [한국어](README.ko.md)
+
 WakeLink rings a loud alarm on a trusted contact's phone on demand, even
 if their phone is set to silent -- so if they forgot to set their own
 alarm, you can still wake them up.
@@ -17,6 +19,9 @@ Website: **<https://wake.seolcu.com>**. Download the latest APK:
 [the newest GitHub release](https://github.com/seolcu/wakelink/releases/latest)).
 WakeLink isn't on the Play Store, so Android will ask you to allow
 installing apps from your browser or file manager once.
+
+The app is available in English and Korean, following your phone's
+language.
 
 After that the app keeps itself current: it checks for a new release
 whenever it opens (and on demand under Settings -> App update), downloads
