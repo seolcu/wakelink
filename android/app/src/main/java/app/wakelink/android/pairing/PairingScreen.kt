@@ -54,6 +54,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.wakelink.android.BuildConfig
 import app.wakelink.android.data.TokenStore
 import app.wakelink.android.network.AcceptInviteRequest
 import app.wakelink.android.network.ApiClient
@@ -163,7 +164,8 @@ fun PairingScreen(initialCode: String?, onDone: () -> Unit) {
                             onClick = {
                                 val send = Intent(Intent.ACTION_SEND).apply {
                                     type = "text/plain"
-                                    putExtra(Intent.EXTRA_TEXT, inviteShareText(current.pairingCode, current.deepLink))
+                                    val link = inviteWebLink(BuildConfig.DEFAULT_SERVER_BASE_URL, current.pairingCode)
+                                    putExtra(Intent.EXTRA_TEXT, inviteShareText(current.pairingCode, link))
                                 }
                                 context.startActivity(Intent.createChooser(send, "초대 코드 보내기"))
                             },

@@ -29,8 +29,8 @@ android {
         // Bump both for every release: versionName becomes the GitHub
         // release tag (v<versionName>) the in-app updater compares against,
         // and Android refuses to install a lower versionCode over a higher one.
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "0.2.1"
 
         // Overridable at build time for self-hosted forks; the official
         // Play Store build ships with the maintainer's default instance.
@@ -39,6 +39,11 @@ android {
         // FCM tokens are scoped to the Firebase project baked into
         // google-services.json.
         buildConfigField("String", "DEFAULT_SERVER_BASE_URL", "\"https://wake.seolcu.com\"")
+        // Host whose https://<host>/invite/CODE links open the app (App
+        // Links). Must match DEFAULT_SERVER_BASE_URL's host, and that server
+        // must publish this APK's signing key in assetlinks.json
+        // (ANDROID_CERT_SHA256) or Android won't verify the link.
+        manifestPlaceholders["inviteHost"] = "wake.seolcu.com"
 
         // GitHub "owner/repo" whose latest release the in-app updater
         // offers. Forks signing with their own key must change (or blank,

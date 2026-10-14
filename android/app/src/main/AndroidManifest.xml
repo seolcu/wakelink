@@ -35,6 +35,18 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="wakelink" android:host="invite" />
             </intent-filter>
+            <!-- https://<server>/invite/CODE share links (App Links). The
+                 server's /.well-known/assetlinks.json vouches for this app's
+                 signing key, so Android opens these here without a chooser;
+                 like the wakelink:// link, they only pre-fill the code. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="${inviteHost}" />
+                <data android:pathPrefix="/invite/" />
+            </intent-filter>
         </activity>
 
         <!-- Separate task/lock-screen activity for the actual ringing UI.
