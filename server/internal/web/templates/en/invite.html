@@ -1,0 +1,48 @@
+{{define "title"}}You've got a WakeLink invite{{end}}
+{{define "description"}}An invite to use WakeLink together. Open it in the app and tap Connect to be able to wake each other.{{end}}
+{{define "content"}}
+<header class="hero hero-compact">
+  <div class="sky" aria-hidden="true">
+    <span class="star"></span><span class="star"></span><span class="star"></span><span class="star"></span>
+    <span class="star"></span><span class="star"></span><span class="star"></span><span class="star"></span>
+  </div>
+  <div class="wrap">
+    <nav class="topbar">
+      <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="36" height="36">WakeLink</a>
+      <div class="topbar-links">{{template "langswitch" .}}</div>
+    </nav>
+  </div>
+  <div class="horizon" aria-hidden="true"></div>
+</header>
+
+<main class="invite">
+  <div class="wrap narrow">
+    <section class="invite-card">
+      <h1>You've got a WakeLink invite</h1>
+      <p class="lead">Once connected, you can wake each other with an alarm, even in silent mode. Nothing connects until you tap <b>Connect</b> in the app yourself.</p>
+
+      <p class="code-label">Invite code</p>
+      <div class="code-box">
+        <code class="code" id="invite-code">{{.Code}}</code>
+        <button class="btn btn-small" type="button" id="copy-code" data-code="{{.Code}}" data-copied="Copied">Copy</button>
+      </div>
+      <p class="muted small">Codes expire shortly. If this one has, ask for a new one.</p>
+
+      <div class="invite-steps">
+        <div class="invite-step">
+          <h2>Already have the app?</h2>
+          <a class="btn btn-primary btn-block" href="wakelink://invite/{{.Code}}">Open in WakeLink</a>
+          <p class="muted small">If the button doesn't work, enter the code above under <b>Add contact</b> in the app.</p>
+        </div>
+        <div class="invite-step">
+          <h2>Don't have it yet?</h2>
+          <a class="btn btn-ghost btn-block" href="{{.DownloadHref}}">Get the Android app</a>
+          <p class="muted small">Install it, pick a name, then tap this link again or enter the code.</p>
+        </div>
+      </div>
+    </section>
+    <p class="center"><a href="/">What is WakeLink?</a></p>
+  </div>
+</main>
+<script src="/assets/invite.js"></script>
+{{end}}

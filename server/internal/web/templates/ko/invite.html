@@ -9,6 +9,7 @@
   <div class="wrap">
     <nav class="topbar">
       <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="36" height="36">WakeLink</a>
+      <div class="topbar-links">{{template "langswitch" .}}</div>
     </nav>
   </div>
   <div class="horizon" aria-hidden="true"></div>
@@ -23,7 +24,7 @@
       <p class="code-label">초대 코드</p>
       <div class="code-box">
         <code class="code" id="invite-code">{{.Code}}</code>
-        <button class="btn btn-small" type="button" id="copy-code" data-code="{{.Code}}">복사</button>
+        <button class="btn btn-small" type="button" id="copy-code" data-code="{{.Code}}" data-copied="복사됨">복사</button>
       </div>
       <p class="muted small">코드는 잠시 후 만료돼요. 만료됐다면 새 코드를 달라고 하세요.</p>
 

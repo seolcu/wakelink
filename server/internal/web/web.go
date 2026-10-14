@@ -21,7 +21,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-//go:embed templates/*.html assets
+//go:embed templates assets
 var files embed.FS
 
 // AndroidPackage is the applicationId the asset-links file vouches for.
@@ -43,36 +43,31 @@ type Config struct {
 }
 
 type Site struct {
-	cfg        Config
-	index      *template.Template
-	invite     *template.Template
+	cfg Config
+	// pages[lang][name]: each page is templates/<lang>/<name> wrapped in
+	// the shared templates/base.html.
+	pages      map[string]map[string]*template.Template
 	assets     http.Handler
 	assetLinks []byte
 }
 
 func New(cfg Config) (*Site, error) {
-	parse := func(name string) (*template.Template, error) {
-		return template.ParseFS(files, "templates/base.html", "templates/"+name)
-	}
-	index, err := parse("index.html")
-	if err != nil {
-		return nil, err
-	}
-	invite, err := parse("invite.html")
-	if err != nil {
-		return nil, err
+	s := &Site{cfg: cfg, pages: map[string]map[string]*template.Template{}}
+	for _, lang := range []string{langKorean, langEnglish} {
+		s.pages[lang] = map[string]*template.Template{}
+		for _, name := range []string{"index.html", "invite.html"} {
+			t, err := template.ParseFS(files, "templates/base.html", "templates/"+lang+"/"+name)
+			if err != nil {
+				return nil, err
+			}
+			s.pages[lang][name] = t
+		}
 	}
 	assetsFS, err := fs.Sub(files, "assets")
 	if err != nil {
 		return nil, err
 	}
-
-	s := &Site{
-		cfg:    cfg,
-		index:  index,
-		invite: invite,
-		assets: http.StripPrefix("/assets/", http.FileServer(http.FS(assetsFS))),
-	}
+	s.assets = http.StripPrefix("/assets/", http.FileServer(http.FS(assetsFS)))
 	if cfg.CertSHA256 != "" {
 		s.assetLinks, err = json.Marshal([]map[string]any{{
 			"relation": []string{"delegate_permission/common.handle_all_urls"},
@@ -104,6 +99,10 @@ func (s *Site) Mount(r chi.Router) {
 type pageData struct {
 	DownloadHref string
 	Code         string
+	// Lang is the page's language; Path is the current path, for the
+	// language switcher and hreflang links (path + "?lang=xx").
+	Lang string
+	Path string
 	// Origin is the absolute scheme://host the page was requested on, for
 	// Open Graph tags (link previews need absolute URLs).
 	Origin string
@@ -119,7 +118,14 @@ func requestOrigin(r *http.Request) string {
 	return scheme + "://" + r.Host
 }
 
-func (s *Site) render(w http.ResponseWriter, t *template.Template, data pageData) {
+func (s *Site) render(w http.ResponseWriter, r *http.Request, name string, data pageData) {
+	lang, fromQuery := pickLanguage(r)
+	data.Lang = lang
+	data.Path = r.URL.Path
+	data.DownloadHref = s.cfg.DownloadHref
+	data.Origin = requestOrigin(r)
+	t := s.pages[lang][name]
+
 	var buf bytes.Buffer
 	if err := t.ExecuteTemplate(&buf, "base", data); err != nil {
 		log.Printf("render page: %v", err)
@@ -127,11 +133,17 @@ func (s *Site) render(w http.ResponseWriter, t *template.Template, data pageData
 		return
 	}
 	setPageHeaders(w)
+	w.Header().Set("Content-Language", lang)
+	// Same URL, different language depending on these request headers.
+	w.Header().Set("Vary", "Accept-Language, Cookie")
+	if fromQuery {
+		rememberLanguage(w, lang)
+	}
 	_, _ = buf.WriteTo(w)
 }
 
 func (s *Site) handleIndex(w http.ResponseWriter, r *http.Request) {
-	s.render(w, s.index, pageData{DownloadHref: s.cfg.DownloadHref, Origin: requestOrigin(r)})
+	s.render(w, r, "index.html", pageData{})
 }
 
 func (s *Site) handleInvite(w http.ResponseWriter, r *http.Request) {
@@ -140,7 +152,7 @@ func (s *Site) handleInvite(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	s.render(w, s.invite, pageData{DownloadHref: s.cfg.DownloadHref, Code: code, Origin: requestOrigin(r)})
+	s.render(w, r, "invite.html", pageData{Code: code})
 }
 
 func (s *Site) handleAsset(w http.ResponseWriter, r *http.Request) {

@@ -11,7 +11,7 @@
   <div class="wrap">
     <nav class="topbar">
       <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="36" height="36">WakeLink</a>
-      <a class="topbar-link" href="https://github.com/seolcu/wakelink">GitHub</a>
+      <div class="topbar-links">{{template "langswitch" .}}<a class="topbar-link" href="https://github.com/seolcu/wakelink">GitHub</a></div>
     </nav>
     <div class="hero-grid">
       <div class="hero-copy">
@@ -151,6 +151,10 @@
       <details class="faq">
         <summary>아이폰에서도 쓸 수 있나요?</summary>
         <p>아직은 Android만 지원해요. 깨우는 사람과 깨워지는 사람 모두 Android 폰에 앱이 있어야 해요.</p>
+      </details>
+      <details class="faq">
+        <summary>앱은 어떤 언어를 지원하나요?</summary>
+        <p>한국어와 영어예요. 폰 언어를 따라가고, Android 13 이상이면 시스템 설정에서 WakeLink만 따로 언어를 고를 수도 있어요.</p>
       </details>
       <details class="faq">
         <summary>플레이 스토어에 없는데 설치해도 괜찮나요?</summary>

@@ -1,0 +1,191 @@
+{{define "title"}}WakeLink — Slept through your alarm? A friend can wake you{{end}}
+{{define "description"}}An Android app that lets someone you trust ring a loud alarm on your phone with one tap, even in silent mode. Only people who both agreed can connect.{{end}}
+{{define "content"}}
+<header class="hero">
+  <div class="sky" aria-hidden="true">
+    <span class="star"></span><span class="star"></span>
+    <span class="star"></span><span class="star"></span>
+    <span class="star"></span><span class="star"></span>
+    <span class="star"></span><span class="star"></span>
+  </div>
+  <div class="wrap">
+    <nav class="topbar">
+      <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="36" height="36">WakeLink</a>
+      <div class="topbar-links">{{template "langswitch" .}}<a class="topbar-link" href="https://github.com/seolcu/wakelink">GitHub</a></div>
+    </nav>
+    <div class="hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow">For the friend who snoozed one too many times</p>
+        <h1>Slept through your alarm?<br><span class="accent">A friend can wake you.</span></h1>
+        <p class="lead">Someone you trust taps one button and your phone rings out loud, even on silent. They can see right away that it actually rang.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="{{.DownloadHref}}">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v9.59l3.3-3.3a1 1 0 1 1 1.4 1.42l-5 5a1 1 0 0 1-1.4 0l-5-5a1 1 0 1 1 1.4-1.42l3.3 3.3V4a1 1 0 0 1 1-1ZM5 19a1 1 0 1 0 0 2h14a1 1 0 1 0 0-2H5Z"/></svg>
+            Get the Android app
+          </a>
+          <a class="btn btn-ghost" href="#how">How does it work?</a>
+        </div>
+        <p class="fineprint">Android 8.0+ · Free · No ads · APK installed outside the Play Store</p>
+      </div>
+
+      <div class="phones" aria-label="Example app screens">
+        <div class="phone phone-back" aria-hidden="true">
+          <div class="screen screen-ringing">
+            <div class="ring-time">06:42</div>
+            <div class="ring-sun"><span></span></div>
+            <p class="ring-who"><b>Alex</b> is waking you up</p>
+            <div class="ring-stop">Stop alarm</div>
+          </div>
+        </div>
+        <div class="phone phone-front">
+          <div class="screen screen-app">
+            <div class="app-bar"><span>WakeLink</span><span class="app-bar-icons" aria-hidden="true">⚙</span></div>
+            <div class="card">
+              <div class="card-row">
+                <span class="avatar avatar-1">A</span>
+                <div class="card-text"><b>Alex</b><small>You can wake each other</small></div>
+              </div>
+              <div class="wake-btn">Wake</div>
+              <div class="pill pill-ok">● Alex's phone is ringing</div>
+            </div>
+            <div class="card">
+              <div class="card-row">
+                <span class="avatar avatar-3">M</span>
+                <div class="card-text"><b>Mom</b><small>Only they can wake you</small></div>
+              </div>
+              <div class="wake-btn wake-btn-off">Waking is off</div>
+            </div>
+            <div class="card">
+              <div class="card-row">
+                <span class="avatar avatar-5">S</span>
+                <div class="card-text"><b>Sam</b><small>You can wake each other</small></div>
+              </div>
+              <div class="wake-btn">Wake</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="horizon" aria-hidden="true"></div>
+</header>
+
+<main>
+  <section class="section" id="how">
+    <div class="wrap">
+      <h2>Three steps, that's it</h2>
+      <ol class="steps">
+        <li class="step">
+          <span class="step-num">1</span>
+          <h3>You both install it</h3>
+          <p>Just pick a name. No phone number, no email.</p>
+        </li>
+        <li class="step">
+          <span class="step-num">2</span>
+          <h3>Connect with a code</h3>
+          <p>One of you creates an invite code and the other has to enter it. You can send it as a link, too.</p>
+        </li>
+        <li class="step">
+          <span class="step-num">3</span>
+          <h3>Tap "Wake"</h3>
+          <p>Their phone rings loudly, and your screen shows whether it actually rang.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="wrap split">
+      <div>
+        <h2>Why it rings even on silent</h2>
+        <p>Your clock app's alarm still goes off when your phone is on silent. That's because silent mode only mutes ringtones and notification sounds, <b>not the alarm volume</b>.</p>
+        <p>WakeLink rings on that same alarm channel, so it gets through silent and vibrate mode without any special permission.</p>
+        <p class="muted">Do Not Disturb's "Total silence" mutes alarms too. If you want WakeLink to get through that as well, you can turn it on in settings. It's changed only while ringing and put back afterwards.</p>
+      </div>
+      <ul class="mode-list" aria-label="What happens in each mode">
+        <li><span class="mode-name">Sound on</span><span class="mode-yes">Rings</span></li>
+        <li><span class="mode-name">Vibrate</span><span class="mode-yes">Rings</span></li>
+        <li><span class="mode-name">Silent</span><span class="mode-yes">Rings</span></li>
+        <li><span class="mode-name">Do Not Disturb (alarms allowed)</span><span class="mode-yes">Rings</span></li>
+        <li><span class="mode-name">Do Not Disturb "Total silence"</span><span class="mode-opt">Rings if you opt in</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <h2>Not just anyone can wake you</h2>
+      <p class="section-lead">It's an app for waking people up, so consent and control came first.</p>
+      <div class="features">
+        <div class="feature">
+          <h3>Both sides agree</h3>
+          <p>You're only connected once the other person types in your invite code. There's no way to add someone behind their back.</p>
+        </div>
+        <div class="feature">
+          <h3>Permission per direction</h3>
+          <p>Each of you decides separately, like "I can wake them, but they can't wake me."</p>
+        </div>
+        <div class="feature">
+          <h3>Turn it off anytime</h3>
+          <p>Switch the whole app off, block one person, or disconnect completely.</p>
+        </div>
+        <div class="feature">
+          <h3>Always visible</h3>
+          <p>A notification always shows when people can wake you. Nothing runs hidden.</p>
+        </div>
+        <div class="feature">
+          <h3>No spamming</h3>
+          <p>One wake-up per person every 30 seconds, and at most 20 in 24 hours.</p>
+        </div>
+        <div class="feature">
+          <h3>Minimal data</h3>
+          <p>The server stores only your display name and a push notification token. Deleting your account deletes your activity too.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="wrap narrow">
+      <h2>Questions</h2>
+      <details class="faq">
+        <summary>Does it work on iPhone?</summary>
+        <p>Not yet. It's Android only, and both the person waking and the person being woken need the app on an Android phone.</p>
+      </details>
+      <details class="faq">
+        <summary>What languages is the app in?</summary>
+        <p>English and Korean. It follows your phone's language, and on Android 13 and later you can also pick one just for WakeLink in system settings.</p>
+      </details>
+      <details class="faq">
+        <summary>It's not on the Play Store. Is it safe to install?</summary>
+        <p>The APK behind the button above is built from the public source on GitHub and always signed with the same key. The first time, you'll need to let your browser or file manager "install unknown apps".</p>
+      </details>
+      <details class="faq">
+        <summary>How do updates work?</summary>
+        <p>When a new version is out, the app tells you when you open it. One tap downloads it and opens the installer. You can also check yourself under Settings → App updates.</p>
+      </details>
+      <details class="faq">
+        <summary>What if battery saving stops it from ringing?</summary>
+        <p>Settings → Device readiness checks notifications, the full-screen lock screen alarm and battery optimization. With no warnings there, wake-ups arrive right away even while your phone sleeps.</p>
+      </details>
+      <details class="faq">
+        <summary>What if their phone is off when I send a wake-up?</summary>
+        <p>Your screen says it wasn't confirmed. It only says it rang once sound actually starts playing on their phone.</p>
+      </details>
+      <details class="faq">
+        <summary>Can I run my own server?</summary>
+        <p>Yes. The server and the app are both open source under the MIT license. Because of how push notifications work, swapping the server alone isn't enough: you also build the app against your own Firebase project. See the <a href="https://github.com/seolcu/wakelink/blob/master/docs/self-hosting.md">self-hosting guide</a>.</p>
+      </details>
+    </div>
+  </section>
+
+  <section class="section final-cta">
+    <div class="wrap narrow center">
+      <img src="/assets/logo.svg" alt="" width="72" height="72">
+      <h2>Worried about tomorrow morning?</h2>
+      <p>Install it together with the person who'll wake you.</p>
+      <a class="btn btn-primary" href="{{.DownloadHref}}">Get the Android app</a>
+    </div>
+  </section>
+</main>
+{{end}}

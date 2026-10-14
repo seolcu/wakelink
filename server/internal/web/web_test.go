@@ -37,7 +37,7 @@ func TestIndexPage(t *testing.T) {
 		t.Fatalf("index: status %d", rec.Code)
 	}
 	body := rec.Body.String()
-	for _, want := range []string{"WakeLink", `href="/download"`, `og:image" content="https://example.com/assets/og.png"`} {
+	for _, want := range []string{"WakeLink", `href="/download"`, `og:image" content="https://example.com/assets/og-en.png"`} {
 		if !strings.Contains(body, want) {
 			t.Errorf("index missing %q", want)
 		}
@@ -68,7 +68,7 @@ func TestInvitePage(t *testing.T) {
 
 func TestAssets(t *testing.T) {
 	h := newTestRouter(t, Config{})
-	for _, path := range []string{"/assets/site.css", "/assets/logo.svg", "/assets/og.png", "/assets/invite.js"} {
+	for _, path := range []string{"/assets/site.css", "/assets/logo.svg", "/assets/og.png", "/assets/og-en.png", "/assets/invite.js"} {
 		if rec := get(t, h, path); rec.Code != http.StatusOK {
 			t.Errorf("%s: status %d", path, rec.Code)
 		}

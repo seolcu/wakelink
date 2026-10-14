@@ -6,10 +6,13 @@
     if (button) button.hidden = true;
     return;
   }
+  // Labels come from the page (data-copied / the button text) so this
+  // script stays language-neutral.
+  var label = button.textContent;
   button.addEventListener("click", function () {
     navigator.clipboard.writeText(button.dataset.code).then(function () {
-      button.textContent = "복사됨";
-      setTimeout(function () { button.textContent = "복사"; }, 2000);
+      button.textContent = button.dataset.copied;
+      setTimeout(function () { button.textContent = label; }, 2000);
     });
   });
 })();
