@@ -109,7 +109,9 @@ in-app updater (`android/.../update/AppUpdater.kt`) reads
 `releases/latest` of `BuildConfig.UPDATE_REPO`, compares the tag against
 `VERSION_NAME`, and hands that asset to the system installer;
 `https://wake.seolcu.com/download` (`APK_DOWNLOAD_URL`, `GET /download`)
-redirects to `releases/latest/download/wakelink.apk`. Always sign with the
+redirects to `releases/latest/download/wakelink.apk`. Release notes are
+bilingual, English first: a `## English` section, then `## 한국어` with the
+same content. Always sign with the
 same key -- Android rejects an update signed differently, and a debug
 build can't be updated to a release build (uninstall first).
 
