@@ -10,7 +10,8 @@
 # https://github.com/seolcu/wakelink/releases/latest/download/wakelink.apk
 # rely on. Without a notes file, GitHub generates notes from commits.
 #
-# Needs: gh (authenticated), a full JDK 17+, the Android SDK, the real
+# Needs: gh (authenticated), a phone connected over adb (launch smoke
+# test, see below), a full JDK 17+, the Android SDK, the real
 # app/google-services.json, and keystore/wakelink-upload.properties --
 # the APK must be signed with the same key every time, or installed
 # copies can't update to it.
@@ -62,6 +63,32 @@ export PATH="$JAVA_HOME/bin:$PATH"
 out=$(mktemp -d)
 trap 'rm -rf "$out"' EXIT
 cp android/app/build/outputs/apk/release/app-release.apk "$out/wakelink.apk"
+
+# Smoke-test the exact APK on a real device before publishing: release
+# builds are minified by R8, which can break reflection-based libraries in
+# ways debug builds never show (0.2.0-0.2.2 all crashed on launch because
+# of this). Installs over the existing app (same key, so data is kept),
+# launches it and fails on any crash. Launching never rings an alarm.
+adb_bin=${ADB:-$ANDROID_HOME/platform-tools/adb}
+if [[ "${SKIP_DEVICE_CHECK:-}" != 1 ]]; then
+    if ! "$adb_bin" get-state >/dev/null 2>&1; then
+        echo "no device connected for the launch smoke test; connect one (USB debugging)" >&2
+        echo "or rerun with SKIP_DEVICE_CHECK=1 if you really must publish untested" >&2
+        exit 1
+    fi
+    pkg=app.wakelink.android
+    "$adb_bin" install -r "$out/wakelink.apk" >/dev/null
+    "$adb_bin" logcat -b crash -c
+    "$adb_bin" shell am force-stop "$pkg"
+    "$adb_bin" shell am start -W -n "$pkg/.MainActivity" >/dev/null
+    sleep 8
+    if "$adb_bin" logcat -d -b crash | grep -q "$pkg" || [[ -z $("$adb_bin" shell pidof "$pkg" | tr -d '\r') ]]; then
+        echo "release APK crashed on launch on the device; not publishing:" >&2
+        "$adb_bin" logcat -d -b crash | grep -E 'FATAL|Exception|Caused by' >&2 || true
+        exit 1
+    fi
+    echo "launch smoke test passed on $("$adb_bin" shell getprop ro.product.model | tr -d '\r')"
+fi
 
 notes_args=(--generate-notes)
 [[ -n "$notes_file" ]] && notes_args=(--notes-file "$notes_file")

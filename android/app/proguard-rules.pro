@@ -11,3 +11,10 @@
 -keep class app.wakelink.android.network.** { *; }
 -keep class kotlin.Metadata { *; }
 -keepattributes Signature, InnerClasses, EnclosingMethod, RuntimeVisibleAnnotations, RuntimeVisibleParameterAnnotations, AnnotationDefault
+
+# WorkManager (initialized at startup via androidx.startup) builds its Room
+# database by reflectively calling WorkDatabase_Impl's no-arg constructor.
+# Under AGP 9's R8 that constructor was stripped, so the release build
+# crashed before any app code ran ("NoSuchMethodException:
+# WorkDatabase_Impl.<init>"). Keep generated Room database constructors.
+-keep class * extends androidx.room.RoomDatabase { <init>(); }

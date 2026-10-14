@@ -97,9 +97,13 @@ self-hosting work.
 ### Releasing the APK
 
 Bump `versionCode` and `versionName` in `android/app/build.gradle.kts`,
-commit and push, then run `scripts/release-android.sh [notes.md]`. It
-refuses to run on a dirty/unpushed tree or an existing tag, builds
-`assembleRelease` with the upload key, and publishes GitHub release
+commit and push, connect a phone over adb, then run
+`scripts/release-android.sh [notes.md]`. It refuses to run on a
+dirty/unpushed tree or an existing tag, builds `assembleRelease` with the
+upload key, installs and launches that exact APK on the phone and aborts
+on a crash (R8 minification breaks reflection-based libraries in ways
+debug builds never show -- 0.2.0-0.2.2 crashed on launch from WorkManager's
+Room database; see `proguard-rules.pro`), and only then publishes GitHub release
 `v<versionName>` with the APK attached as exactly `wakelink.apk`. The
 in-app updater (`android/.../update/AppUpdater.kt`) reads
 `releases/latest` of `BuildConfig.UPDATE_REPO`, compares the tag against
