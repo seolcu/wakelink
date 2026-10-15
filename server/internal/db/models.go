@@ -8,6 +8,7 @@ type User struct {
 	FCMToken    sql.NullString
 	APIKeyHash  string
 	CreatedAt   int64
+	PublicKey   sql.NullString
 }
 
 type Invite struct {

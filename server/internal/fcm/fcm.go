@@ -25,6 +25,10 @@ type WakeMessage struct {
 	// Image is "" or "custom:<id>:<sha256>", a picture to show on the
 	// alarm screen (subject to the receiver's own setting).
 	Image string
+	// Sealed, when set, is an end-to-end encrypted payload for the
+	// recipient device holding the sender's name and choices; the push then
+	// carries nothing else readable (no display name, sound or image).
+	Sealed string
 }
 
 type Sender interface {

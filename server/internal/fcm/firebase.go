@@ -32,9 +32,14 @@ func NewFirebaseSender(ctx context.Context, serviceAccountPath string) (*Firebas
 
 func (s *FirebaseSender) SendWakeTrigger(ctx context.Context, token string, wake WakeMessage) (string, error) {
 	data := map[string]string{
-		"type":              "wake_alarm",
-		"trigger_id":        strconv.FormatInt(wake.TriggerID, 10),
-		"from_display_name": wake.FromDisplayName,
+		"type":       "wake_alarm",
+		"trigger_id": strconv.FormatInt(wake.TriggerID, 10),
+	}
+	if wake.Sealed != "" {
+		// Google relays this push, so keep everything identifying sealed.
+		data["sealed"] = wake.Sealed
+	} else {
+		data["from_display_name"] = wake.FromDisplayName
 	}
 	if wake.Sound != "" {
 		data["sound"] = wake.Sound

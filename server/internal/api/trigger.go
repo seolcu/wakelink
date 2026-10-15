@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"errors"
 	"io"
 	"log"
@@ -23,9 +24,17 @@ type triggerRequest struct {
 	// Image is "" or "custom:<id>", one of the sender's own images to show
 	// on the alarm screen.
 	Image string `json:"image"`
+	// Sealed is the end-to-end encrypted form (base64, made by the app for
+	// the recipient's public key): it carries the sender's name, sound,
+	// image and the keys for those uploads. When set, Sound and Image must
+	// be empty -- the server never learns them -- and only Sealed is pushed.
+	Sealed string `json:"sealed"`
 
 	pushImage string
 }
+
+// maxSealedLen keeps the push comfortably inside FCM's 4 KB data limit.
+const maxSealedLen = 3000
 
 // handleTrigger is the core of the whole system: it checks the caller is a
 // member of the pairing, that they currently have permission to wake the
@@ -66,6 +75,16 @@ func (s *Server) handleTrigger(w http.ResponseWriter, r *http.Request) {
 	if err := readJSON(w, r, &req); err != nil && !errors.Is(err, io.EOF) {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
+	}
+	if req.Sealed != "" {
+		if req.Sound != "" || req.Image != "" || len(req.Sealed) > maxSealedLen {
+			writeError(w, http.StatusBadRequest, "sealed triggers carry everything inside the sealed payload")
+			return
+		}
+		if _, err := base64.StdEncoding.DecodeString(req.Sealed); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid sealed payload")
+			return
+		}
 	}
 	pushSound, err := s.resolveTriggerSound(r.Context(), user.ID, req.Sound)
 	if err == nil {
@@ -117,6 +136,7 @@ func (s *Server) handleTrigger(w http.ResponseWriter, r *http.Request) {
 		FromDisplayName: user.DisplayName,
 		Sound:           pushSound,
 		Image:           req.pushImage,
+		Sealed:          req.Sealed,
 	})
 	if errors.Is(sendErr, fcm.ErrUnregistered) {
 		s.Metrics.TriggersFailed.Add(1)

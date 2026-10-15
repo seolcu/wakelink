@@ -39,6 +39,7 @@ func (s *Server) Router() http.Handler {
 		r.Post("/v1/triggers/{id}/ack", s.handleAckTrigger)
 		r.Get("/v1/triggers", s.handleListTriggers)
 		r.Post("/v1/me/rotate-key", s.handleRotateKey)
+		r.Put("/v1/me/public-key", s.handlePutPublicKey)
 		r.Get("/v1/metrics", s.handleMetrics)
 		r.Get("/v1/sounds", s.list(soundMedia))
 		r.Post("/v1/sounds", s.upload(soundMedia))

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/base64"
 	"net/http"
 
 	"wakelink/internal/auth"
@@ -69,4 +70,33 @@ func (s *Server) handleRotateKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"api_key": rawKey})
+}
+
+type publicKeyRequest struct {
+	PublicKey string `json:"public_key"`
+}
+
+// maxPublicKeyLen bounds the stored key (a Tink public keyset is ~100
+// bytes base64); it's opaque to the server, which only relays it.
+const maxPublicKeyLen = 1024
+
+// handlePutPublicKey records the caller's device public key, which their
+// contacts use to seal wakes (see triggerRequest.Sealed).
+func (s *Server) handlePutPublicKey(w http.ResponseWriter, r *http.Request) {
+	user := userFromContext(r)
+	var req publicKeyRequest
+	if err := readJSON(w, r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	raw, err := base64.StdEncoding.DecodeString(req.PublicKey)
+	if err != nil || len(raw) == 0 || len(req.PublicKey) > maxPublicKeyLen {
+		writeError(w, http.StatusBadRequest, "invalid public_key")
+		return
+	}
+	if err := s.DB.SetPublicKey(r.Context(), user.ID, req.PublicKey); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to save public key")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

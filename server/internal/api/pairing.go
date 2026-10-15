@@ -142,6 +142,9 @@ type pairingView struct {
 	ICanWakeThem  bool   `json:"i_can_wake_them"`
 	TheyCanWakeMe bool   `json:"they_can_wake_me"`
 	CreatedAt     int64  `json:"created_at"`
+	// OtherPublicKey is the contact's device key for sealing wakes end to
+	// end; null if their app is too old to have one.
+	OtherPublicKey *string `json:"other_public_key"`
 }
 
 func (s *Server) handleListPairings(w http.ResponseWriter, r *http.Request) {
@@ -171,6 +174,9 @@ func (s *Server) handleListPairings(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		view := pairingView{ID: p.ID, OtherUserName: other.DisplayName, CreatedAt: p.CreatedAt}
+		if other.PublicKey.Valid {
+			view.OtherPublicKey = &other.PublicKey.String
+		}
 		if p.UserAID == user.ID {
 			view.ICanWakeThem = p.ACanWakeB
 			view.TheyCanWakeMe = p.BCanWakeA

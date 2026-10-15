@@ -19,6 +19,6 @@ func (m *MockSender) SendWakeTrigger(ctx context.Context, token string, wake Wak
 		return "", err
 	}
 	msgID := "mock-" + hex.EncodeToString(id)
-	log.Printf("[fcm mock] trigger_id=%d token=%s from=%q sound=%q image=%q message_id=%s", wake.TriggerID, token, wake.FromDisplayName, wake.Sound, wake.Image, msgID)
+	log.Printf("[fcm mock] trigger_id=%d token=%s from=%q sound=%q image=%q sealed=%t message_id=%s", wake.TriggerID, token, wake.FromDisplayName, wake.Sound, wake.Image, wake.Sealed != "", msgID)
 	return msgID, nil
 }

@@ -24,6 +24,10 @@ var presetSounds = map[string]bool{
 
 const maxMediaNameRunes = 40
 
+// encryptedMediaMagic prefixes uploads encrypted by the app
+// (android/.../crypto/MediaCrypto.kt).
+var encryptedMediaMagic = []byte("WLE1")
+
 // mediaCategory is one family of uploads: sounds (voice recordings and
 // audio files) or images (photos, GIFs). They share storage, endpoints'
 // shape and access rules, and differ in accepted formats and limits.
@@ -143,7 +147,13 @@ func (s *Server) upload(c mediaCategory) http.HandlerFunc {
 			writeError(w, http.StatusBadRequest, "invalid request body")
 			return
 		}
+		// Apps that encrypt end to end upload "WLE1"-prefixed ciphertext the
+		// server can't (and shouldn't) look inside; plaintext uploads from
+		// older apps are still format-checked.
 		mime := c.sniff(data)
+		if bytes.HasPrefix(data, encryptedMediaMagic) {
+			mime = "application/octet-stream"
+		}
 		if mime == "" {
 			writeError(w, http.StatusUnsupportedMediaType, "unsupported format")
 			return
