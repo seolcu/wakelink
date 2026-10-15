@@ -24,10 +24,10 @@
 Forgot to set an alarm? Someone you trust can still wake you up.
 
 - **Rings through silent and vibrate mode**, with no special permission
-- **Tells the sender whether it actually rang**, not just that it was sent
+- **Tells the sender whether it actually rang**, not just that it was sent, and when they stopped the alarm
 - **Only people who both agreed can connect**, and either side can stop it anytime
-- **Your sound, your picture**: pick a built-in sound, record your voice or send an audio file, and attach a photo or GIF (even one you take on the spot) to show on their alarm screen
-- **End-to-end encrypted**: names, recordings, files and pictures are encrypted for the receiver's phone; the server only relays ciphertext
+- **Your sound, your picture**: pick a built-in sound, record your voice or send an audio file, attach a photo or GIF (even one you take on the spot), and add a short message to show on their alarm screen
+- **End-to-end encrypted**: names, messages, recordings, files and pictures are encrypted for the receiver's phone; the server only relays ciphertext
 - **The receiver stays in control** of volume (with an optional gradual rise), which sounds others may choose, and whether pictures show
 - **Rings even before the first unlock** after a reboot, e.g. an overnight auto-restart
 - **One app for everyone**: every install can wake others and be woken
@@ -77,6 +77,8 @@ sequenceDiagram
     B->>S: POST /v1/triggers/{id}/ack (once sound is playing)
     A->>S: poll trigger status
     S-->>A: status: rang
+    B->>S: POST /v1/triggers/{id}/dismiss (when they stop it)
+    S-->>A: status: they stopped it
 ```
 
 ## Development

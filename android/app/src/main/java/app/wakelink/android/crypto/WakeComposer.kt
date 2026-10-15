@@ -12,7 +12,8 @@ import app.wakelink.android.sounds.parseSoundRef
  * Builds the trigger request for waking [pairing]'s contact.
  *
  * If their app has a device key, everything personal -- this user's name,
- * the chosen sound and picture, and the keys to decrypt those uploads -- is
+ * the chosen sound and picture, the keys to decrypt those uploads, and the
+ * message -- is
  * sealed to that key, so neither the server nor FCM can read it. A contact
  * whose app predates end-to-end encryption just gets a plain wake (their
  * app couldn't use the extras anyway).
@@ -24,6 +25,7 @@ object WakeComposer {
         pairing: PairingView,
         soundKey: String?,
         imageKey: String?,
+        message: String? = null,
     ): TriggerRequest {
         val recipientKey = pairing.otherPublicKey ?: return TriggerRequest()
         val keys = MediaKeyStore(context)
@@ -46,7 +48,9 @@ object WakeComposer {
         }
 
         val myName = runCatching { api.getMe().displayName }.getOrDefault("")
-        val wake = SealedWake(from = myName, sound = sound, soundKey = soundContentKey, image = image, imageKey = imageContentKey)
+        val wake = SealedWake(from = myName, sound = sound, soundKey = soundContentKey, image = image, imageKey = imageContentKey,
+            message = message?.trim()?.take(SealedWake.MAX_MESSAGE_LENGTH)?.ifBlank { null },
+        )
         return TriggerRequest(sealed = SealedWake.seal(wake, recipientKey))
     }
 

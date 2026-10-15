@@ -37,6 +37,7 @@ func (s *Server) Router() http.Handler {
 		r.Delete("/v1/pairings/{id}", s.handleDeletePairing)
 		r.Post("/v1/pairings/{id}/trigger", s.handleTrigger)
 		r.Post("/v1/triggers/{id}/ack", s.handleAckTrigger)
+		r.Post("/v1/triggers/{id}/dismiss", s.handleDismissTrigger)
 		r.Get("/v1/triggers", s.handleListTriggers)
 		r.Post("/v1/me/rotate-key", s.handleRotateKey)
 		r.Put("/v1/me/public-key", s.handlePutPublicKey)

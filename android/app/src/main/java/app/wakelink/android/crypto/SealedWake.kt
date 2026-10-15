@@ -19,8 +19,12 @@ data class SealedWake(
     /** "custom:<id>:<sha256 of the ciphertext>" or null. */
     val image: String? = null,
     @Json(name = "image_key") val imageKey: String? = null,
+    /** A short note shown on the alarm screen, at most [MAX_MESSAGE_LENGTH] characters. */
+    val message: String? = null,
 ) {
     companion object {
+        const val MAX_MESSAGE_LENGTH = 100
+
         private val adapter = Moshi.Builder().add(KotlinJsonAdapterFactory()).build().adapter(SealedWake::class.java)
 
         /** Encrypts [wake] to [recipientPublicKey]; the result goes in the trigger's "sealed" field. */

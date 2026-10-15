@@ -769,3 +769,36 @@ func TestReceiverCanRefuseOneContact(t *testing.T) {
 		t.Fatalf("empty patch: expected 400, got %d", rec.Code)
 	}
 }
+
+func TestDismissTrigger(t *testing.T) {
+	s, _ := newTestServer(t)
+	router := s.Router()
+	alice, bob, pairingID := pairUp(t, router)
+	carol := register(t, router, "Carol", "carol-token")
+
+	rec := doJSON(t, router, http.MethodPost, pairingPath(pairingID)+"/trigger", bob.APIKey, nil)
+	var triggered struct {
+		TriggerID int64 `json:"trigger_id"`
+	}
+	_ = json.Unmarshal(rec.Body.Bytes(), &triggered)
+	path := "/v1/triggers/" + strconv.FormatInt(triggered.TriggerID, 10) + "/dismiss"
+
+	// Only the person woken can say they stopped it.
+	for name, key := range map[string]string{"sender": bob.APIKey, "stranger": carol.APIKey} {
+		if rec := doJSON(t, router, http.MethodPost, path, key, nil); rec.Code != http.StatusNotFound {
+			t.Fatalf("%s dismiss: expected 404, got %d", name, rec.Code)
+		}
+	}
+	for i := 0; i < 2; i++ { // idempotent
+		if rec := doJSON(t, router, http.MethodPost, path, alice.APIKey, nil); rec.Code != http.StatusOK {
+			t.Fatalf("dismiss #%d: status %d body %s", i+1, rec.Code, rec.Body.String())
+		}
+	}
+
+	rec = doJSON(t, router, http.MethodGet, "/v1/triggers?pairing_id="+strconv.FormatInt(pairingID, 10), bob.APIKey, nil)
+	var list []triggerView
+	_ = json.Unmarshal(rec.Body.Bytes(), &list)
+	if len(list) != 1 || list[0].DismissedAt == nil || list[0].AckReceivedAt == nil {
+		t.Fatalf("sender should see it dismissed (and therefore rung): %+v", list)
+	}
+}

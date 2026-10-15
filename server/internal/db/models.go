@@ -74,4 +74,5 @@ type Trigger struct {
 	SendStatus    string
 	SendError     sql.NullString
 	AckReceivedAt sql.NullInt64
+	DismissedAt   sql.NullInt64
 }

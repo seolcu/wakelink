@@ -70,6 +70,8 @@ data class TriggerView(
     @Json(name = "created_at") val createdAt: Long,
     @Json(name = "send_status") val sendStatus: String,
     @Json(name = "ack_received_at") val ackReceivedAt: Long?,
+    /** When the person woken stopped the alarm themselves ("they're up"). */
+    @Json(name = "dismissed_at") val dismissedAt: Long? = null,
 )
 
 data class MeResponse(

@@ -135,3 +135,42 @@ func TestInviteExpiryAndMarkUsed(t *testing.T) {
 		t.Fatalf("expected expires_at to already be in the past")
 	}
 }
+
+func TestDeleteTriggersBefore(t *testing.T) {
+	d := newTestDB(t)
+	ctx := context.Background()
+	a, err := d.CreateUser(ctx, "A", "hash-a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := d.CreateUser(ctx, "B", "hash-b")
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := d.CreatePairing(ctx, a.ID, b.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	old, err := d.CreateTrigger(ctx, p.ID, a.ID, b.ID, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.ExecContext(ctx, `UPDATE triggers SET created_at = ? WHERE id = ?`, time.Now().Add(-100*24*time.Hour).Unix(), old.ID); err != nil {
+		t.Fatal(err)
+	}
+	recent, err := d.CreateTrigger(ctx, p.ID, a.ID, b.ID, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	n, err := d.DeleteTriggersBefore(ctx, time.Now().Add(-90*24*time.Hour))
+	if err != nil || n != 1 {
+		t.Fatalf("expected 1 deleted, got %d (%v)", n, err)
+	}
+	if _, err := d.GetTrigger(ctx, old.ID); err != ErrNotFound {
+		t.Fatalf("old trigger should be gone, got %v", err)
+	}
+	if _, err := d.GetTrigger(ctx, recent.ID); err != nil {
+		t.Fatalf("recent trigger should remain: %v", err)
+	}
+}

@@ -212,6 +212,7 @@ private fun RingingScreen(
     var dismissMode by remember { mutableStateOf(DismissMode.UNLOCK_REQUIRED) }
     var now by remember { mutableStateOf(LocalTime.now()) }
     val image by AlarmForegroundService.ringingImage.collectAsState()
+    val message by AlarmForegroundService.ringingMessage.collectAsState()
 
     LaunchedEffect(Unit) {
         dismissMode = SettingsRepository(context).dismissMode.first()
@@ -285,6 +286,19 @@ private fun RingingScreen(
                     color = Color.White.copy(alpha = 0.8f),
                     style = MaterialTheme.typography.titleMedium,
                 )
+                message?.let {
+                    Text(
+                        it,
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleLarge,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color.White.copy(alpha = 0.14f))
+                            .padding(horizontal = 20.dp, vertical = 14.dp),
+                    )
+                }
             }
 
             Spacer(Modifier.height(40.dp))

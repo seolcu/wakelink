@@ -59,6 +59,9 @@ interface WakeLinkApi {
     @POST("v1/triggers/{id}/ack")
     suspend fun ackTrigger(@Path("id") triggerId: Long): Response<Unit>
 
+    @POST("v1/triggers/{id}/dismiss")
+    suspend fun dismissTrigger(@Path("id") triggerId: Long): Response<Unit>
+
     @GET("v1/triggers")
     suspend fun listTriggers(@Query("pairing_id") pairingId: Long, @Query("limit") limit: Int = 20): List<TriggerView>
 

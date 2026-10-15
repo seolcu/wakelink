@@ -160,7 +160,8 @@ sender's app --HTTPS(Bearer api_key)--> wakelinkd --FCM Admin SDK--> receiver's 
 POST /v1/pairings/{id}/trigger              data-only, high-priority        WakeFirebaseMessagingService
                                                                              -> AlarmForegroundService
                                                                              -> RingingActivity (full-screen)
-receiver's app --POST /v1/triggers/{id}/ack--> wakelinkd
+receiver's app --POST /v1/triggers/{id}/ack--> wakelinkd       (it rang)
+receiver's app --POST /v1/triggers/{id}/dismiss--> wakelinkd   (they stopped it: "they're up")
 ```
 
 The sender's UI must not claim success before the `ack` arrives --
@@ -170,6 +171,13 @@ The sender's UI must not claim success before the `ack` arrives --
 once `MediaPlayer` is actually playing (see `handleAckTrigger` in
 `server/internal/api/trigger.go`). If FCM reports the recipient's token
 as unregistered, the server clears it so later triggers fail fast with 422.
+
+After the ack, the card keeps polling (only while the screen is open, ~6
+minutes) for `dismissed_at`. The receiver sends `dismiss` for every wake
+behind the current ring when the *user* stops it -- every
+`ACTION_STOP` is user-initiated (Stop button, notification action,
+switching receiving off); the 5-minute auto-stop calls `stopRinging()`
+directly and must never dismiss, or "they're up" would lie.
 
 `AlarmForegroundService.ringingFrom` (a `StateFlow`) is the single
 "is it ringing, and who for" signal; `RingingActivity` closes itself when
@@ -197,8 +205,8 @@ auto-restart doesn't silence the morning. Consequences to respect:
   `isUserUnlocked()` before touching them on anything that can run locked
   (`WakeLinkApplication.onCreate` splits work into locked-safe and
   `onUserUnlocked()`).
-- An alarm that rings while locked (or offline) queues its ack in
-  `SettingsRepository`; `AckSender.flushPending` sends it on
+- An alarm that rings while locked (or offline) queues its ack (and
+  dismissal) in `SettingsRepository`; `AckSender.flushPending` sends them on
   `BOOT_COMPLETED` (= first unlock) or the next app start.
 - Sealed wake details can't be opened while locked, so such a wake rings
   with the receiver's own sound and an "unknown sender" name.
@@ -236,8 +244,9 @@ contacts in `GET /v1/pairings` (`other_public_key`).
   (`MediaCrypto`, "WLE1" + AES-256-GCM); the server stores ciphertext only
   and the key stays in `MediaKeyStore`. Losing it (reinstall) makes that
   upload unusable on this phone.
-- `WakeComposer` seals the sender's name, sound, picture and their content
-  keys to the recipient's key (`SealedWake`) and sends only `sealed`; the
+- `WakeComposer` seals the sender's name, sound, picture, their content
+  keys and the optional one-off message (<= 100 chars, shown on
+  `RingingActivity`) to the recipient's key (`SealedWake`) and sends only `sealed`; the
   server relays it in the push without being able to read it, and the push
   then carries no plaintext name/sound/image. Contacts whose app has no key
   get a plain wake with none of the extras.
@@ -302,7 +311,8 @@ in-memory trigger counters (`internal/metrics`, reset on restart).
 
 None of the foreign keys cascade and `foreign_keys` is on, so any delete
 must remove children first, in a transaction (`DeletePairing`,
-`DeleteUser`). Expired invites are purged hourly by `main.go`.
+`DeleteUser`). Expired invites, and wake history older than
+`TRIGGER_RETENTION_DAYS` (default 90), are purged hourly by `main.go`.
 
 ### Backend package layout
 

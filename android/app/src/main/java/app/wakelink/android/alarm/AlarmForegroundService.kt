@@ -75,6 +75,15 @@ class AlarmForegroundService : Service() {
             // instance (e.g. the alarm had already stopped by the time
             // "Stop" was tapped) -- stopRinging() removes it immediately.
             startInForeground(buildMinimalNotification())
+            // Every ACTION_STOP is the user's doing (Stop button, notification
+            // action, switching receiving off); the auto-stop never comes
+            // through here. Tell the senders they're up.
+            val stopped = takeRingingTriggers()
+            if (stopped.isNotEmpty()) {
+                (application as WakeLinkApplication).appScope.launch {
+                    stopped.forEach { AckSender.dismissOrQueue(applicationContext, it) }
+                }
+            }
             stopRinging()
             return START_NOT_STICKY
         }
@@ -86,13 +95,16 @@ class AlarmForegroundService : Service() {
         val soundContentKey = intent?.getStringExtra(EXTRA_SOUND_KEY)?.fromB64()
         val requestedImage = parseSoundRef(intent?.getStringExtra(EXTRA_IMAGE)) as? SoundRef.Custom
         val imageContentKey = intent?.getStringExtra(EXTRA_IMAGE_KEY)?.fromB64()
+        val message = intent?.getStringExtra(EXTRA_MESSAGE)?.ifBlank { null }
 
         // startForeground must be called within moments of the service
         // being started (from startForegroundService), before any
         // suspending work -- so this happens synchronously.
-        startInForeground(buildRingingNotification(fromDisplayName))
+        startInForeground(buildRingingNotification(fromDisplayName, message))
         val alreadyActive = _ringingFrom.value != null
         _ringingFrom.value = fromDisplayName
+        _ringingMessage.value = message // the newest wake's, like the name
+        if (triggerId >= 0) synchronized(ringingTriggers) { ringingTriggers += triggerId }
 
         if (alreadyActive) {
             // A second wake while one is already ringing (or starting):
@@ -154,7 +166,7 @@ class AlarmForegroundService : Service() {
         )
     }
 
-    private fun buildRingingNotification(fromDisplayName: String): Notification {
+    private fun buildRingingNotification(fromDisplayName: String, message: String?): Notification {
         val fullScreenIntent = Intent(this, RingingActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_USER_ACTION
         }
@@ -172,6 +184,7 @@ class AlarmForegroundService : Service() {
         return NotificationCompat.Builder(this, WakeLinkApplication.CHANNEL_ALARM)
             .setSmallIcon(R.drawable.ic_stat_wakelink)
             .setContentTitle(getString(R.string.alarm_notification_title, fromDisplayName))
+            .setContentText(message)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setContentIntent(fullScreenPendingIntent)
@@ -322,6 +335,7 @@ class AlarmForegroundService : Service() {
         imageJob?.cancel()
         imageJob = null
         _ringingImage.value = null
+        _ringingMessage.value = null
         mediaPlayer?.apply {
             runCatching { stop() }
             release()
@@ -351,6 +365,7 @@ class AlarmForegroundService : Service() {
             }
         }
         _ringingFrom.value = null
+        takeRingingTriggers()
     }
 
     private fun stopRinging() {
@@ -381,6 +396,9 @@ class AlarmForegroundService : Service() {
         /** "custom:<id>:<sha256>" of a picture to show while ringing, and its content key. */
         const val EXTRA_IMAGE = "image"
         const val EXTRA_IMAGE_KEY = "image_key"
+
+        /** The sender's short note, from the sealed wake. */
+        const val EXTRA_MESSAGE = "message"
         private const val NOTIFICATION_ID = 42
 
         /** Gives up after this long so an unattended phone doesn't ring until the battery dies. */
@@ -396,6 +414,13 @@ class AlarmForegroundService : Service() {
 
         private val _ringingFrom = MutableStateFlow<String?>(null)
 
+        /** Wakes behind the current ring, process-wide so a fresh instance handling ACTION_STOP sees them. */
+        private val ringingTriggers = mutableSetOf<Long>()
+
+        private fun takeRingingTriggers(): List<Long> = synchronized(ringingTriggers) {
+            ringingTriggers.toList().also { ringingTriggers.clear() }
+        }
+
         /**
          * Who is currently waking this device, or null when not ringing.
          * Set synchronously on start (before the full-screen UI can
@@ -408,5 +433,10 @@ class AlarmForegroundService : Service() {
 
         /** The (decrypted, cached) picture the sender attached, once it has loaded. */
         val ringingImage: StateFlow<File?> = _ringingImage.asStateFlow()
+
+        private val _ringingMessage = MutableStateFlow<String?>(null)
+
+        /** The sender's note for the alarm screen, or null. */
+        val ringingMessage: StateFlow<String?> = _ringingMessage.asStateFlow()
     }
 }

@@ -42,6 +42,7 @@ class WakeFirebaseMessagingService : FirebaseMessagingService() {
                 intent.putExtra(AlarmForegroundService.EXTRA_SOUND_KEY, wake.soundKey)
                 intent.putExtra(AlarmForegroundService.EXTRA_IMAGE, wake.image)
                 intent.putExtra(AlarmForegroundService.EXTRA_IMAGE_KEY, wake.imageKey)
+                intent.putExtra(AlarmForegroundService.EXTRA_MESSAGE, wake.message?.take(SealedWake.MAX_MESSAGE_LENGTH))
             }
         } else {
             // From a sender whose app predates end-to-end encryption.

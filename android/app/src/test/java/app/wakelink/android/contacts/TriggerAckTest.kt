@@ -7,10 +7,19 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class TriggerAckTest {
-    private fun trigger(id: Long, status: String = "sent", ack: Long? = null, from: Long = 1) = TriggerView(
+    private fun trigger(id: Long, status: String = "sent", ack: Long? = null, from: Long = 1, dismissed: Long? = null) = TriggerView(
         id = id, pairingId = 7, fromUserId = from, toUserId = if (from == 1L) 2 else 1,
-        createdAt = 1_700_000_000, sendStatus = status, ackReceivedAt = ack,
+        createdAt = 1_700_000_000, sendStatus = status, ackReceivedAt = ack, dismissedAt = dismissed,
     )
+
+    @Test
+    fun dismissedMeansTheyStoppedIt() {
+        assertEquals(AckCheck.DISMISSED, ackCheckFor(5, listOf(trigger(5, ack = 1, dismissed = 2))))
+        assertEquals(
+            HistoryLine("11/14 22:13", R.string.history_outgoing, R.string.history_dismissed),
+            historyLine(trigger(1, ack = 1, dismissed = 2), myUserId = 1, zone = ZoneOffset.UTC),
+        )
+    }
 
     @Test
     fun sentIsNotRang() {

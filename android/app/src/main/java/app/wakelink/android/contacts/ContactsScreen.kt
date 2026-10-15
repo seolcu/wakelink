@@ -36,6 +36,10 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material.icons.rounded.ChatBubbleOutline
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -97,6 +101,10 @@ import app.wakelink.android.ui.components.StatusKind
 import app.wakelink.android.ui.components.StatusPill
 import app.wakelink.android.ui.components.SunriseMark
 import app.wakelink.android.ui.theme.WakeTheme
+import android.content.Context
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -119,6 +127,32 @@ private suspend fun awaitAck(api: WakeLinkApi, pairingId: Long, triggerId: Long)
     }
     return AckCheck.PENDING
 }
+
+private const val DISMISS_POLL_INTERVAL_MS = 5_000L
+private const val DISMISS_POLL_ATTEMPTS = 72 // ~6 min: the alarm auto-stops after 5
+
+/**
+ * After it rang, keeps checking whether the receiver stopped the alarm
+ * themselves. Returns when they did (epoch seconds), or null once the alarm
+ * must have auto-stopped. Runs only while the screen is shown.
+ */
+private suspend fun awaitDismiss(api: WakeLinkApi, pairingId: Long, triggerId: Long): Long? {
+    repeat(DISMISS_POLL_ATTEMPTS) {
+        delay(DISMISS_POLL_INTERVAL_MS)
+        val triggers = runCatching { api.listTriggers(pairingId, limit = 10) }.getOrNull() ?: return@repeat
+        triggers.firstOrNull { it.id == triggerId }?.dismissedAt?.let { return it }
+    }
+    return null
+}
+
+private fun dismissedStatus(context: Context, name: String, at: Long) = WakeStatus(
+    StatusKind.SUCCESS,
+    context.getString(
+        R.string.contacts_dismissed,
+        name,
+        DateTimeFormatter.ofPattern("HH:mm").format(Instant.ofEpochSecond(at).atZone(ZoneId.systemDefault())),
+    ),
+)
 
 /** Readiness problems already shown in a dialog during this process's lifetime. */
 private val warningsAlreadyShown = mutableSetOf<String>()
@@ -377,6 +411,9 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
     // The picture shown on their alarm screen; null = none.
     val imageKey by settings.imageForPairing(pairing.id).collectAsState(initial = null)
     var pickingImage by remember { mutableStateOf(false) }
+    // A note for the next wake only; cleared once it has been sent.
+    var message by rememberSaveable(pairing.id) { mutableStateOf("") }
+    var editingMessage by remember { mutableStateOf(false) }
     var mySounds by remember { mutableStateOf<List<MediaView>?>(null) }
     var pickingSound by remember { mutableStateOf(false) }
     // A recording/picture picked here may since have been deleted (or be
@@ -505,7 +542,7 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
                     scope.launch {
                         try {
                             val triggerId = try {
-                                api.trigger(pairing.id, WakeComposer.request(context, api, pairing, soundKey, imageKey)).triggerId
+                                api.trigger(pairing.id, WakeComposer.request(context, api, pairing, soundKey, imageKey, message)).triggerId
                             } catch (e: Exception) {
                                 wakeStatus = WakeStatus(StatusKind.ERROR, context.getString(R.string.contacts_send_failed, e.toUserMessage(context)))
                                 // e.g. unpaired, permission revoked or receiving switched off
@@ -513,11 +550,14 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
                                 onChanged()
                                 return@launch
                             }
+                            message = ""
                             // Sent is not rang: keep the user waiting on the
                             // receiver's ack before claiming success.
                             wakeStatus = WakeStatus(StatusKind.PROGRESS, context.getString(R.string.contacts_checking, pairing.otherUserName))
-                            wakeStatus = when (awaitAck(api, pairing.id, triggerId)) {
-                                AckCheck.ACKED -> WakeStatus(StatusKind.SUCCESS, context.getString(R.string.contacts_ringing, pairing.otherUserName))
+                            val check = awaitAck(api, pairing.id, triggerId)
+                            val ringing = WakeStatus(StatusKind.SUCCESS, context.getString(R.string.contacts_ringing, pairing.otherUserName))
+                            wakeStatus = when (check) {
+                                AckCheck.ACKED, AckCheck.DISMISSED -> ringing
                                 AckCheck.FAILED -> WakeStatus(StatusKind.ERROR, context.getString(R.string.contacts_push_failed))
                                 AckCheck.PENDING -> WakeStatus(
                                     StatusKind.WARNING,
@@ -525,6 +565,15 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
                                 )
                             }
                             if (showHistory) loadHistory()
+                            waking = false
+                            if (check == AckCheck.ACKED || check == AckCheck.DISMISSED) {
+                                // Rang; now wait (screen open only) for "they stopped it".
+                                val at = awaitDismiss(api, pairing.id, triggerId)
+                                if (at != null && wakeStatus === ringing) { // not replaced by a newer wake
+                                    wakeStatus = dismissedStatus(context, pairing.otherUserName, at)
+                                    if (showHistory) loadHistory()
+                                }
+                            }
                         } finally {
                             waking = false
                         }
@@ -559,8 +608,21 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
                             Text(stringResource(if (imageKey == null) R.string.contacts_image_none else R.string.contacts_image_set))
                         },
                     )
+                    AssistChip(
+                        onClick = { editingMessage = true },
+                        leadingIcon = { Icon(Icons.Rounded.ChatBubbleOutline, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                        label = {
+                            Text(
+                                if (message.isEmpty()) stringResource(R.string.contacts_message_none)
+                                else stringResource(R.string.contacts_message_set, message),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.widthIn(max = 200.dp),
+                            )
+                        },
+                    )
                 }
-                if (pairing.otherPublicKey == null && (soundKey != null || imageKey != null)) {
+                if (pairing.otherPublicKey == null && (soundKey != null || imageKey != null || message.isNotEmpty())) {
                     Text(
                         stringResource(R.string.contacts_extras_need_update, pairing.otherUserName),
                         style = MaterialTheme.typography.bodySmall,
@@ -623,6 +685,18 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
                 scope.launch { mySounds = runCatching { api.listSounds() }.getOrNull() }
             },
             api = api,
+        )
+    }
+
+    if (editingMessage) {
+        MessageDialog(
+            name = pairing.otherUserName,
+            initial = message,
+            onSave = {
+                message = it
+                editingMessage = false
+            },
+            onDismiss = { editingMessage = false },
         )
     }
 

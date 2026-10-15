@@ -54,6 +54,7 @@
     <string name="contacts_send_failed">전송 실패: %1$s</string>
     <string name="contacts_checking">%1$s님 폰에서 울리는지 확인 중…</string>
     <string name="contacts_ringing">%1$s님 폰에서 울리는 중</string>
+    <string name="contacts_dismissed">%1$s님이 알람을 끔 (%2$s)</string>
     <string name="contacts_push_failed">푸시 전달 실패</string>
     <string name="contacts_unconfirmed">전송됨 · 울렸는지는 확인 안 됨 (상대 폰이 꺼져 있거나 오프라인일 수 있음)</string>
     <string name="contacts_wake">깨우기</string>
@@ -72,6 +73,7 @@
     <string name="history_outgoing">내가 깨움</string>
     <string name="history_incoming">상대가 나를 깨움</string>
     <string name="history_acked">울림 확인됨</string>
+    <string name="history_dismissed">알람 끔</string>
     <string name="history_failed">전달 실패</string>
     <string name="history_unconfirmed">울림 미확인</string>
     <string name="pairing_title">연락처 추가</string>
@@ -216,7 +218,14 @@
     <string name="contacts_image_none">사진 없음</string>
     <string name="contacts_image_set">사진 첨부됨</string>
     <string name="contacts_image_title">%1$s님 알람 화면에 띄울 사진</string>
-    <string name="contacts_extras_need_update">소리·사진은 %1$s님이 앱을 업데이트해야 전달됨</string>
+    <string name="contacts_extras_need_update">소리·사진·메시지는 %1$s님이 앱을 업데이트해야 전달됨</string>
+    <string name="contacts_message_none">메시지 없음</string>
+    <string name="contacts_message_set">“%1$s”</string>
+    <string name="contacts_message_title">%1$s님에게 보낼 메시지</string>
+    <string name="contacts_message_placeholder">일어나! 9시 수업</string>
+    <string name="contacts_message_hint">알람 화면에 표시. 다음 깨우기에만 함께 전송</string>
+    <string name="contacts_message_save">완료</string>
+    <string name="contacts_message_remove">지우기</string>
     <string name="images_hint">울리는 동안 상대 알람 화면에 표시 · 3MB 이하 GIF는 움직이는 그대로 · 깨우는 상대만 볼 수 있게 암호화</string>
     <string name="images_gallery">갤러리</string>
     <string name="images_camera">사진 찍기</string>

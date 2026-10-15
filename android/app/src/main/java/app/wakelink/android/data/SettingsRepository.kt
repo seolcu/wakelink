@@ -71,6 +71,7 @@ class SettingsRepository(context: Context) {
         const val AUTO_UPDATE_CHECK = "auto_update_check"
         const val SKIPPED_UPDATE_VERSION = "skipped_update_version"
         const val PENDING_ACKS = "pending_acks"
+        const val PENDING_DISMISSES = "pending_dismisses"
         const val SOUND_FOR_PAIRING_PREFIX = "sound_for_pairing_"
         const val IMAGE_FOR_PAIRING_PREFIX = "image_for_pairing_"
         const val SHOW_IMAGES = "show_images"
@@ -181,10 +182,22 @@ class SettingsRepository(context: Context) {
         }
     }
 
-    suspend fun takePendingAcks(): List<Long> = withContext(Dispatchers.IO) {
+    suspend fun takePendingAcks(): List<Long> = takeIds(Keys.PENDING_ACKS)
+
+    /** Same as [addPendingAck], for "the user stopped the alarm themselves". */
+    suspend fun addPendingDismiss(triggerId: Long) = withContext(Dispatchers.IO) {
         synchronized(LOCK) {
-            val current = prefs.getStringSet(Keys.PENDING_ACKS, emptySet()).orEmpty()
-            prefs.edit().remove(Keys.PENDING_ACKS).commit()
+            val current = prefs.getStringSet(Keys.PENDING_DISMISSES, emptySet()).orEmpty()
+            prefs.edit().putStringSet(Keys.PENDING_DISMISSES, current + triggerId.toString()).commit()
+        }
+    }
+
+    suspend fun takePendingDismisses(): List<Long> = takeIds(Keys.PENDING_DISMISSES)
+
+    private suspend fun takeIds(key: String): List<Long> = withContext(Dispatchers.IO) {
+        synchronized(LOCK) {
+            val current = prefs.getStringSet(key, emptySet()).orEmpty()
+            prefs.edit().remove(key).commit()
             current.mapNotNull { it.toLongOrNull() }
         }
     }

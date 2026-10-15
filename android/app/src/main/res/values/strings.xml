@@ -56,6 +56,7 @@
     <string name="contacts_send_failed">Couldn\'t send: %1$s</string>
     <string name="contacts_checking">Checking whether %1$s\'s phone is ringing…</string>
     <string name="contacts_ringing">%1$s\'s phone is ringing</string>
+    <string name="contacts_dismissed">%1$s stopped the alarm (%2$s)</string>
     <string name="contacts_push_failed">The push couldn\'t be delivered</string>
     <string name="contacts_unconfirmed">Sent, but we couldn\'t confirm it rang. Their phone may be off or offline</string>
     <string name="contacts_wake">Wake</string>
@@ -74,6 +75,7 @@
     <string name="history_outgoing">You woke them</string>
     <string name="history_incoming">They woke you</string>
     <string name="history_acked">Rang</string>
+    <string name="history_dismissed">Stopped by them</string>
     <string name="history_failed">Delivery failed</string>
     <string name="history_unconfirmed">Not confirmed</string>
     <string name="history_line" translatable="false">%1$s · %2$s · %3$s</string>
@@ -219,7 +221,14 @@
     <string name="contacts_image_none">No picture</string>
     <string name="contacts_image_set">Picture attached</string>
     <string name="contacts_image_title">Picture for %1$s\'s alarm screen</string>
-    <string name="contacts_extras_need_update">%1$s needs to update WakeLink to get your sound and picture.</string>
+    <string name="contacts_extras_need_update">%1$s needs to update WakeLink to get your sound, picture and message.</string>
+    <string name="contacts_message_none">No message</string>
+    <string name="contacts_message_set">“%1$s”</string>
+    <string name="contacts_message_title">Message for %1$s</string>
+    <string name="contacts_message_placeholder">Wake up! Class at 9</string>
+    <string name="contacts_message_hint">Shown on their alarm screen, with the next wake-up only</string>
+    <string name="contacts_message_save">Done</string>
+    <string name="contacts_message_remove">Remove</string>
     <string name="images_hint">Shown on their alarm screen while it rings. Photos are resized; GIFs up to 3 MB keep moving. Encrypted on your phone so only the people you wake can see it.</string>
     <string name="images_gallery">Gallery</string>
     <string name="images_camera">Take photo</string>

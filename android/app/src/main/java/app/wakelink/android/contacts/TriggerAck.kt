@@ -7,7 +7,8 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-enum class AckCheck { ACKED, PENDING, FAILED }
+/** PENDING -> ACKED (it rang) -> DISMISSED (they stopped it themselves), or FAILED. */
+enum class AckCheck { ACKED, DISMISSED, PENDING, FAILED }
 
 /**
  * Where a just-sent trigger stands, judged from a fresh trigger list. Only
@@ -17,6 +18,7 @@ enum class AckCheck { ACKED, PENDING, FAILED }
 fun ackCheckFor(triggerId: Long, triggers: List<TriggerView>): AckCheck {
     val t = triggers.firstOrNull { it.id == triggerId } ?: return AckCheck.PENDING
     return when {
+        t.dismissedAt != null -> AckCheck.DISMISSED
         t.ackReceivedAt != null -> AckCheck.ACKED
         t.sendStatus != "sent" -> AckCheck.FAILED
         else -> AckCheck.PENDING
@@ -32,6 +34,7 @@ fun historyLine(t: TriggerView, myUserId: Long, zone: ZoneId = ZoneId.systemDefa
     val time = historyTimeFormat.format(Instant.ofEpochSecond(t.createdAt).atZone(zone))
     val direction = if (t.fromUserId == myUserId) R.string.history_outgoing else R.string.history_incoming
     val outcome = when {
+        t.dismissedAt != null -> R.string.history_dismissed
         t.ackReceivedAt != null -> R.string.history_acked
         t.sendStatus != "sent" -> R.string.history_failed
         else -> R.string.history_unconfirmed

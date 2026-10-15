@@ -46,6 +46,13 @@ func main() {
 	if inviteTTLSec < 1 {
 		log.Fatalf("INVITE_TTL_SECONDS must be >= 1, got %d", inviteTTLSec)
 	}
+	historyDays, err := getenvInt("TRIGGER_RETENTION_DAYS", 90)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if historyDays < 0 {
+		log.Fatalf("TRIGGER_RETENTION_DAYS must be >= 0, got %d", historyDays)
+	}
 	registerPerHour, err := getenvInt("REGISTER_LIMIT_PER_HOUR", 10)
 	if err != nil {
 		log.Fatal(err)
@@ -121,7 +128,7 @@ func main() {
 
 	cleanupCtx, stopCleanup := context.WithCancel(context.Background())
 	defer stopCleanup()
-	go purgeExpiredInvites(cleanupCtx, database, time.Hour)
+	go housekeeping(cleanupCtx, database, time.Hour, time.Duration(historyDays)*24*time.Hour)
 
 	go func() {
 		log.Printf("wakelinkd listening on %s", listenAddr)
@@ -146,9 +153,10 @@ func main() {
 	}
 }
 
-// purgeExpiredInvites deletes dead invite codes once at startup and then
-// every interval, until ctx is cancelled.
-func purgeExpiredInvites(ctx context.Context, database *db.DB, interval time.Duration) {
+// housekeeping deletes dead invite codes and wake history older than
+// historyRetention (0 = keep forever), once at startup and then every
+// interval, until ctx is cancelled.
+func housekeeping(ctx context.Context, database *db.DB, interval, historyRetention time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
@@ -156,6 +164,13 @@ func purgeExpiredInvites(ctx context.Context, database *db.DB, interval time.Dur
 			log.Printf("purge expired invites: %v", err)
 		} else if n > 0 {
 			log.Printf("purged %d expired invite(s)", n)
+		}
+		if historyRetention > 0 {
+			if n, err := database.DeleteTriggersBefore(ctx, time.Now().Add(-historyRetention)); err != nil {
+				log.Printf("purge old wake history: %v", err)
+			} else if n > 0 {
+				log.Printf("purged %d wake(s) older than %s", n, historyRetention)
+			}
 		}
 		select {
 		case <-ctx.Done():

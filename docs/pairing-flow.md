@@ -48,7 +48,9 @@ Notes:
   former contact can wake that device again.
 - Nothing here lets one side see the other's location, messages, contacts,
   or any data beyond: display name, whether they can currently wake you,
-  and the timestamps of past triggers.
+  and the timestamps of past triggers (sent, rang, and when the person
+  woken stopped the alarm themselves). The server deletes that history
+  after 90 days (`TRIGGER_RETENTION_DAYS`).
 - Separately from per-pairing permissions, each person has a "receiving
   wake-ups" switch, and per contact a "receive wake-ups from them" switch
   (the receiver's own consent; the sender can't change it). While either

@@ -174,6 +174,26 @@ func (s *Server) handleTrigger(w http.ResponseWriter, r *http.Request) {
 // handleAckTrigger is called by the receiver app the moment it actually
 // starts playing the alarm sound. The sender UI waits for this before
 // claiming success -- "sent" and "actually rang" are not the same thing.
+// handleDismissTrigger: the recipient stopped the alarm themselves, which
+// tells the sender they're actually up (an ack only says it rang).
+func (s *Server) handleDismissTrigger(w http.ResponseWriter, r *http.Request) {
+	user := userFromContext(r)
+	triggerID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid trigger id")
+		return
+	}
+	if err := s.DB.DismissTrigger(r.Context(), triggerID, user.ID); err != nil {
+		if err == db.ErrNotFound {
+			writeError(w, http.StatusNotFound, "trigger not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
 func (s *Server) handleAckTrigger(w http.ResponseWriter, r *http.Request) {
 	user := userFromContext(r)
 	triggerID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
@@ -205,6 +225,8 @@ type triggerView struct {
 	SendStatus    string  `json:"send_status"`
 	SendError     *string `json:"send_error"`
 	AckReceivedAt *int64  `json:"ack_received_at"`
+	// DismissedAt is set once the person woken stopped the alarm themselves.
+	DismissedAt *int64 `json:"dismissed_at"`
 }
 
 func newTriggerView(t db.Trigger) triggerView {
@@ -224,6 +246,9 @@ func newTriggerView(t db.Trigger) triggerView {
 	}
 	if t.AckReceivedAt.Valid {
 		v.AckReceivedAt = &t.AckReceivedAt.Int64
+	}
+	if t.DismissedAt.Valid {
+		v.DismissedAt = &t.DismissedAt.Int64
 	}
 	return v
 }

@@ -51,13 +51,50 @@ func (d *DB) AckTrigger(ctx context.Context, triggerID, ackingUserID int64) erro
 	return nil
 }
 
+// DismissTrigger records that the person woken (dismissingUserID, who must
+// be the trigger's recipient) stopped the alarm themselves. Only the first
+// dismissal counts; repeating it is a no-op success. A dismissal also
+// implies the alarm rang, so it fills in a missing ack (e.g. one still
+// queued on a phone that rang before its first unlock).
+func (d *DB) DismissTrigger(ctx context.Context, triggerID, dismissingUserID int64) error {
+	now := time.Now().Unix()
+	res, err := d.ExecContext(ctx,
+		`UPDATE triggers SET dismissed_at = ?, ack_received_at = COALESCE(ack_received_at, ?)
+		 WHERE id = ? AND to_user_id = ? AND dismissed_at IS NULL`,
+		now, now, triggerID, dismissingUserID,
+	)
+	if err != nil {
+		return err
+	}
+	if n, err := res.RowsAffected(); err != nil {
+		return err
+	} else if n > 0 {
+		return nil
+	}
+	t, err := d.GetTrigger(ctx, triggerID)
+	if err != nil || t.ToUserID != dismissingUserID {
+		return ErrNotFound
+	}
+	return nil // already dismissed
+}
+
+// DeleteTriggersBefore removes wake history older than cutoff (privacy: the
+// history is only useful for recent days). Returns how many were removed.
+func (d *DB) DeleteTriggersBefore(ctx context.Context, cutoff time.Time) (int64, error) {
+	res, err := d.ExecContext(ctx, `DELETE FROM triggers WHERE created_at < ?`, cutoff.Unix())
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
 func (d *DB) GetTrigger(ctx context.Context, id int64) (*Trigger, error) {
 	row := d.QueryRowContext(ctx,
-		`SELECT id, pairing_id, from_user_id, to_user_id, created_at, fcm_message_id, send_status, send_error, ack_received_at FROM triggers WHERE id = ?`,
+		`SELECT id, pairing_id, from_user_id, to_user_id, created_at, fcm_message_id, send_status, send_error, ack_received_at, dismissed_at FROM triggers WHERE id = ?`,
 		id,
 	)
 	var t Trigger
-	if err := row.Scan(&t.ID, &t.PairingID, &t.FromUserID, &t.ToUserID, &t.CreatedAt, &t.FCMMessageID, &t.SendStatus, &t.SendError, &t.AckReceivedAt); err != nil {
+	if err := row.Scan(&t.ID, &t.PairingID, &t.FromUserID, &t.ToUserID, &t.CreatedAt, &t.FCMMessageID, &t.SendStatus, &t.SendError, &t.AckReceivedAt, &t.DismissedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -68,7 +105,7 @@ func (d *DB) GetTrigger(ctx context.Context, id int64) (*Trigger, error) {
 
 func (d *DB) ListTriggersForPairing(ctx context.Context, pairingID int64, limit int) ([]Trigger, error) {
 	rows, err := d.QueryContext(ctx,
-		`SELECT id, pairing_id, from_user_id, to_user_id, created_at, fcm_message_id, send_status, send_error, ack_received_at
+		`SELECT id, pairing_id, from_user_id, to_user_id, created_at, fcm_message_id, send_status, send_error, ack_received_at, dismissed_at
 		 FROM triggers WHERE pairing_id = ? ORDER BY created_at DESC LIMIT ?`,
 		pairingID, limit,
 	)
@@ -80,7 +117,7 @@ func (d *DB) ListTriggersForPairing(ctx context.Context, pairingID int64, limit 
 	var out []Trigger
 	for rows.Next() {
 		var t Trigger
-		if err := rows.Scan(&t.ID, &t.PairingID, &t.FromUserID, &t.ToUserID, &t.CreatedAt, &t.FCMMessageID, &t.SendStatus, &t.SendError, &t.AckReceivedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.PairingID, &t.FromUserID, &t.ToUserID, &t.CreatedAt, &t.FCMMessageID, &t.SendStatus, &t.SendError, &t.AckReceivedAt, &t.DismissedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, t)
