@@ -30,18 +30,25 @@ func NewFirebaseSender(ctx context.Context, serviceAccountPath string) (*Firebas
 	return &FirebaseSender{client: client}, nil
 }
 
-func (s *FirebaseSender) SendWakeTrigger(ctx context.Context, token string, triggerID int64, fromDisplayName string) (string, error) {
+func (s *FirebaseSender) SendWakeTrigger(ctx context.Context, token string, wake WakeMessage) (string, error) {
+	data := map[string]string{
+		"type":              "wake_alarm",
+		"trigger_id":        strconv.FormatInt(wake.TriggerID, 10),
+		"from_display_name": wake.FromDisplayName,
+	}
+	if wake.Sound != "" {
+		data["sound"] = wake.Sound
+	}
+	if wake.Image != "" {
+		data["image"] = wake.Image
+	}
 	msg := &messaging.Message{
 		Token: token,
 		// Data-only: no "notification" payload. The receiver app must be
 		// the one deciding how to alert (STREAM_ALARM + full-screen intent),
 		// not the OS's default notification tray display, or the whole
 		// point of bypassing silent/DND is defeated.
-		Data: map[string]string{
-			"type":              "wake_alarm",
-			"trigger_id":        strconv.FormatInt(triggerID, 10),
-			"from_display_name": fromDisplayName,
-		},
+		Data: data,
 		Android: &messaging.AndroidConfig{
 			Priority: "high",
 		},

@@ -40,6 +40,14 @@ func (s *Server) Router() http.Handler {
 		r.Get("/v1/triggers", s.handleListTriggers)
 		r.Post("/v1/me/rotate-key", s.handleRotateKey)
 		r.Get("/v1/metrics", s.handleMetrics)
+		r.Get("/v1/sounds", s.list(soundMedia))
+		r.Post("/v1/sounds", s.upload(soundMedia))
+		r.Delete("/v1/sounds/{id}", s.remove(soundMedia))
+		r.Get("/v1/sounds/{id}/audio", s.serve(soundMedia))
+		r.Get("/v1/images", s.list(imageMedia))
+		r.Post("/v1/images", s.upload(imageMedia))
+		r.Delete("/v1/images/{id}", s.remove(imageMedia))
+		r.Get("/v1/images/{id}/data", s.serve(imageMedia))
 	})
 
 	return r

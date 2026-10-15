@@ -44,7 +44,7 @@ func TestCheckBlocksWithinCooldown(t *testing.T) {
 	ctx := context.Background()
 	pairingID, fromUserID := setUpPairing(t, database)
 
-	if _, err := database.CreateTrigger(ctx, pairingID, fromUserID, fromUserID); err != nil {
+	if _, err := database.CreateTrigger(ctx, pairingID, fromUserID, fromUserID, "", ""); err != nil {
 		t.Fatalf("create trigger: %v", err)
 	}
 
@@ -59,7 +59,7 @@ func TestCheckAllowsAfterCooldownWindow(t *testing.T) {
 	ctx := context.Background()
 	pairingID, fromUserID := setUpPairing(t, database)
 
-	trig, err := database.CreateTrigger(ctx, pairingID, fromUserID, fromUserID)
+	trig, err := database.CreateTrigger(ctx, pairingID, fromUserID, fromUserID, "", "")
 	if err != nil {
 		t.Fatalf("create trigger: %v", err)
 	}
@@ -86,7 +86,7 @@ func TestCheckBlocksAtDailyCap(t *testing.T) {
 		if err := l.Check(ctx, database, pairingID, fromUserID); err != nil {
 			t.Fatalf("check %d: expected no error, got %v", i, err)
 		}
-		if _, err := database.CreateTrigger(ctx, pairingID, fromUserID, fromUserID); err != nil {
+		if _, err := database.CreateTrigger(ctx, pairingID, fromUserID, fromUserID, "", ""); err != nil {
 			t.Fatalf("create trigger %d: %v", i, err)
 		}
 	}

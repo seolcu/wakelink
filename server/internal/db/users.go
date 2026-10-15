@@ -101,6 +101,7 @@ func (d *DB) DeleteUser(ctx context.Context, userID int64) error {
 
 	stmts := []string{
 		`DELETE FROM triggers WHERE from_user_id = ?1 OR to_user_id = ?1`,
+		`DELETE FROM custom_media WHERE owner_user_id = ?1`,
 		`DELETE FROM pairings WHERE user_a_id = ?1 OR user_b_id = ?1`,
 		`DELETE FROM pairing_invites WHERE inviter_user_id = ?1`,
 	}

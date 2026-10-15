@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -14,6 +15,17 @@ import (
 	"wakelink/internal/fcm"
 	"wakelink/internal/ratelimit"
 )
+
+type triggerRequest struct {
+	// Sound is "", "device", "preset:<name>" or "custom:<id>" (one of the
+	// sender's own uploads); see resolveTriggerSound.
+	Sound string `json:"sound"`
+	// Image is "" or "custom:<id>", one of the sender's own images to show
+	// on the alarm screen.
+	Image string `json:"image"`
+
+	pushImage string
+}
 
 // handleTrigger is the core of the whole system: it checks the caller is a
 // member of the pairing, that they currently have permission to wake the
@@ -49,6 +61,27 @@ func (s *Server) handleTrigger(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Optional body (older apps send none): the sound the sender picked.
+	var req triggerRequest
+	if err := readJSON(w, r, &req); err != nil && !errors.Is(err, io.EOF) {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	pushSound, err := s.resolveTriggerSound(r.Context(), user.ID, req.Sound)
+	if err == nil {
+		var pushImage string
+		pushImage, err = s.resolveTriggerImage(r.Context(), user.ID, req.Image)
+		req.pushImage = pushImage
+	}
+	if err != nil {
+		if errors.Is(err, errInvalidMedia) {
+			writeError(w, http.StatusBadRequest, "unknown sound or image")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+
 	if err := s.RateLimit.Check(r.Context(), s.DB, pairingID, user.ID); err != nil {
 		switch err {
 		case ratelimit.ErrCooldown:
@@ -71,7 +104,7 @@ func (s *Server) handleTrigger(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	trig, err := s.DB.CreateTrigger(r.Context(), pairingID, user.ID, otherID)
+	trig, err := s.DB.CreateTrigger(r.Context(), pairingID, user.ID, otherID, req.Sound, req.Image)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to record trigger")
 		return
@@ -79,7 +112,12 @@ func (s *Server) handleTrigger(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
-	msgID, sendErr := s.FCM.SendWakeTrigger(ctx, recipient.FCMToken.String, trig.ID, user.DisplayName)
+	msgID, sendErr := s.FCM.SendWakeTrigger(ctx, recipient.FCMToken.String, fcm.WakeMessage{
+		TriggerID:       trig.ID,
+		FromDisplayName: user.DisplayName,
+		Sound:           pushSound,
+		Image:           req.pushImage,
+	})
 	if errors.Is(sendErr, fcm.ErrUnregistered) {
 		s.Metrics.TriggersFailed.Add(1)
 		_ = s.DB.UpdateTriggerSendResult(r.Context(), trig.ID, "fcm_error", "", sendErr.Error())

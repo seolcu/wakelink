@@ -23,12 +23,14 @@ import (
 // fakeSender records what it was asked to send instead of calling real FCM.
 // Setting err makes every send fail with it, to exercise error paths.
 type fakeSender struct {
-	sent []string
-	err  error
+	sent     []string
+	messages []fcm.WakeMessage
+	err      error
 }
 
-func (f *fakeSender) SendWakeTrigger(ctx context.Context, token string, triggerID int64, fromDisplayName string) (string, error) {
+func (f *fakeSender) SendWakeTrigger(ctx context.Context, token string, msg fcm.WakeMessage) (string, error) {
 	f.sent = append(f.sent, token)
+	f.messages = append(f.messages, msg)
 	if f.err != nil {
 		return "", f.err
 	}

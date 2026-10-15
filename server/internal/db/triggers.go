@@ -7,11 +7,13 @@ import (
 	"time"
 )
 
-func (d *DB) CreateTrigger(ctx context.Context, pairingID, fromUserID, toUserID int64) (*Trigger, error) {
+// CreateTrigger records a wake about to be sent; sound and image are the
+// requested keys, or "" for none (the receiver's own default sound).
+func (d *DB) CreateTrigger(ctx context.Context, pairingID, fromUserID, toUserID int64, sound, image string) (*Trigger, error) {
 	now := time.Now().Unix()
 	res, err := d.ExecContext(ctx,
-		`INSERT INTO triggers (pairing_id, from_user_id, to_user_id, created_at, send_status) VALUES (?, ?, ?, ?, 'pending')`,
-		pairingID, fromUserID, toUserID, now,
+		`INSERT INTO triggers (pairing_id, from_user_id, to_user_id, created_at, send_status, sound, image) VALUES (?, ?, ?, ?, 'pending', NULLIF(?, ''), NULLIF(?, ''))`,
+		pairingID, fromUserID, toUserID, now, sound, image,
 	)
 	if err != nil {
 		return nil, err

@@ -12,7 +12,7 @@ import (
 // package's tests actually depend on, so that's what gets covered.
 func TestMockSenderReturnsMessageID(t *testing.T) {
 	sender := NewMockSender()
-	id, err := sender.SendWakeTrigger(context.Background(), "some-token", 1, "Alice")
+	id, err := sender.SendWakeTrigger(context.Background(), "some-token", WakeMessage{TriggerID: 1, FromDisplayName: "Alice"})
 	if err != nil {
 		t.Fatalf("send: %v", err)
 	}

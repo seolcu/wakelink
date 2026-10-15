@@ -14,9 +14,21 @@ import (
 // the token rather than keep retrying it.
 var ErrUnregistered = errors.New("fcm: device token is no longer registered")
 
+// WakeMessage is what a wake push tells the receiving device.
+type WakeMessage struct {
+	TriggerID       int64
+	FromDisplayName string
+	// Sound is the sender's choice ("preset:chime", "custom:12:<sha256>"),
+	// or "" to let the receiver use its own default. The receiver's own
+	// policy decides whether to honor it.
+	Sound string
+	// Image is "" or "custom:<id>:<sha256>", a picture to show on the
+	// alarm screen (subject to the receiver's own setting).
+	Image string
+}
+
 type Sender interface {
-	// SendWakeTrigger sends a high-priority, data-only push to token,
-	// notifying the recipient device it has been triggered by
-	// fromDisplayName. Returns the provider's message id on success.
-	SendWakeTrigger(ctx context.Context, token string, triggerID int64, fromDisplayName string) (messageID string, err error)
+	// SendWakeTrigger sends a high-priority, data-only push to token.
+	// Returns the provider's message id on success.
+	SendWakeTrigger(ctx context.Context, token string, msg WakeMessage) (messageID string, err error)
 }

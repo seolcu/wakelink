@@ -89,7 +89,7 @@ func TestAckTriggerDoubleAckReturnsErrNotFound(t *testing.T) {
 	bob, _ := d.CreateUser(ctx, "Bob", "bob-hash")
 	pairing, _ := d.CreatePairing(ctx, alice.ID, bob.ID)
 
-	trig, err := d.CreateTrigger(ctx, pairing.ID, bob.ID, alice.ID)
+	trig, err := d.CreateTrigger(ctx, pairing.ID, bob.ID, alice.ID, "", "")
 	if err != nil {
 		t.Fatalf("create trigger: %v", err)
 	}
