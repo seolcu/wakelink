@@ -229,7 +229,7 @@
     <string name="contacts_message_hint">Shown on their alarm screen, with the next wake-up only</string>
     <string name="contacts_message_save">Done</string>
     <string name="contacts_message_remove">Remove</string>
-    <string name="images_hint">Shown on their alarm screen while it rings. Photos are resized; GIFs up to 3 MB keep moving. Encrypted on your phone so only the people you wake can see it.</string>
+    <string name="images_hint">Shown on their alarm screen with the next wake-up only; pictures you add stay here for next time. Photos are resized; GIFs up to 3 MB keep moving. Encrypted on your phone so only the people you wake can see it.</string>
     <string name="images_gallery">Gallery</string>
     <string name="images_camera">Take photo</string>
     <string name="images_none">None</string>

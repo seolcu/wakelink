@@ -143,13 +143,12 @@ class SettingsRepository(context: Context) {
         else putString(Keys.SOUND_FOR_PAIRING_PREFIX + pairingId, key)
     }
 
-    /** The picture (a "custom:<id>" key) this user attaches when waking [pairingId]; null = none. */
-    fun imageForPairing(pairingId: Long): Flow<String?> =
-        observe { it.getString(Keys.IMAGE_FOR_PAIRING_PREFIX + pairingId, null) }
-
-    suspend fun setImageForPairing(pairingId: Long, key: String?) = edit {
-        if (key == null) remove(Keys.IMAGE_FOR_PAIRING_PREFIX + pairingId)
-        else putString(Keys.IMAGE_FOR_PAIRING_PREFIX + pairingId, key)
+    /**
+     * Before 0.4.1 a picked picture stayed attached to every wake of
+     * [pairingId]; now it goes with one wake only, so drop that old choice.
+     */
+    suspend fun forgetLegacyImageForPairing(pairingId: Long) = edit {
+        remove(Keys.IMAGE_FOR_PAIRING_PREFIX + pairingId)
     }
 
     suspend fun isDndOverrideActive(): Boolean = withContext(Dispatchers.IO) {

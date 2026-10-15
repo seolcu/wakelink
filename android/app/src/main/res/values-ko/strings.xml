@@ -226,7 +226,7 @@
     <string name="contacts_message_hint">알람 화면에 표시. 다음 깨우기에만 함께 전송</string>
     <string name="contacts_message_save">완료</string>
     <string name="contacts_message_remove">지우기</string>
-    <string name="images_hint">울리는 동안 상대 알람 화면에 표시 · 3MB 이하 GIF는 움직이는 그대로 · 깨우는 상대만 볼 수 있게 암호화</string>
+    <string name="images_hint">다음 깨우기 한 번만 상대 알람 화면에 표시 · 올린 사진은 여기 남아 다음에 바로 선택 · 3MB 이하 GIF는 움직이는 그대로 · 깨우는 상대만 볼 수 있게 암호화</string>
     <string name="images_gallery">갤러리</string>
     <string name="images_camera">사진 찍기</string>
     <string name="images_none">없음</string>

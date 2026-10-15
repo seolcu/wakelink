@@ -408,8 +408,10 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
     val settings = remember { SettingsRepository(context) }
     // The sound this user sends to this contact; null lets the receiver's own sound play.
     val soundKey by settings.soundForPairing(pairing.id).collectAsState(initial = null)
-    // The picture shown on their alarm screen; null = none.
-    val imageKey by settings.imageForPairing(pairing.id).collectAsState(initial = null)
+    // The picture for the next wake only (like the message); null = none.
+    // Uploaded pictures stay in the picker for quick reuse.
+    var imageKey by rememberSaveable(pairing.id) { mutableStateOf<String?>(null) }
+    LaunchedEffect(pairing.id) { settings.forgetLegacyImageForPairing(pairing.id) }
     var pickingImage by remember { mutableStateOf(false) }
     // A note for the next wake only; cleared once it has been sent.
     var message by rememberSaveable(pairing.id) { mutableStateOf("") }
@@ -427,7 +429,7 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
     LaunchedEffect(imageKey) {
         val ref = parseSoundRef(imageKey) as? SoundRef.Custom ?: return@LaunchedEffect
         val list = runCatching { api.listImages() }.getOrNull() ?: return@LaunchedEffect
-        if (list.none { it.id == ref.id }) settings.setImageForPairing(pairing.id, null)
+        if (list.none { it.id == ref.id }) imageKey = null
     }
     var wakeStatus by remember { mutableStateOf<WakeStatus?>(null) }
     var waking by remember { mutableStateOf(false) }
@@ -551,6 +553,7 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
                                 return@launch
                             }
                             message = ""
+                            imageKey = null
                             // Sent is not rang: keep the user waiting on the
                             // receiver's ack before claiming success.
                             wakeStatus = WakeStatus(StatusKind.PROGRESS, context.getString(R.string.contacts_checking, pairing.otherUserName))
@@ -705,7 +708,7 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
             title = stringResource(R.string.contacts_image_title, pairing.otherUserName),
             selected = imageKey,
             api = api,
-            onSelect = { key -> scope.launch { settings.setImageForPairing(pairing.id, key) } },
+            onSelect = { key -> imageKey = key },
             onDismiss = { pickingImage = false },
         )
     }
