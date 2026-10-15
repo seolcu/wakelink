@@ -83,6 +83,11 @@ The app is localized: all user-facing text lives in
 `res/values/strings.xml` (English -- the default and the fallback for
 unsupported languages) and `res/values-ko/strings.xml` (Korean). Never
 hardcode UI text in Kotlin; add every new string to both files.
+Korean tone: buttons, labels, statuses, chips and settings/setup
+explanations are short noun phrases ("서로 깨우기 가능", "끄려면 잠금 해제
+필요", "~ 중", "~됨"); only text that speaks to the user -- dialog bodies,
+errors, warnings, empty states -- uses 해요체, kept to one or two short
+sentences. Don't end every line in ~해요.
 `generateLocaleConfig` exposes both languages in Android 13+'s per-app
 language setting. There is no
 instrumented (on-device) test suite; anything touching audio, DND,
