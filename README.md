@@ -40,7 +40,7 @@ Forgot to set an alarm? Someone you trust can still wake you up.
 3. Pick a name and swap an invite code with the person who'll wake you.
 4. The app walks you through the permissions a wake needs (notifications, full-screen alarm, battery optimization), so it rings reliably while you sleep.
 
-After that the app keeps itself up to date: it checks for a new release whenever it opens (or under **Settings → App updates**), downloads it, and opens the installer. You just confirm.
+After that the app keeps itself up to date: when a new release is out you get a notification, and one tap downloads it and opens the installer (or check yourself under **Settings → App updates**).
 
 ## Why it rings even on silent
 
