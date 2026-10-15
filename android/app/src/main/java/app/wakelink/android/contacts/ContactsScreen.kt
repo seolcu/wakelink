@@ -22,12 +22,14 @@ import androidx.compose.material.icons.automirrored.rounded.CallMade
 import androidx.compose.material.icons.automirrored.rounded.CallReceived
 import androidx.compose.material.icons.rounded.Alarm
 import androidx.compose.material.icons.rounded.AlarmOff
+import androidx.compose.material.icons.rounded.DoNotDisturbOn
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material.icons.rounded.Refresh
@@ -417,6 +419,13 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    if (pairing.theyCanWakeMe && !pairing.iAcceptFromThem) {
+                        Text(
+                            stringResource(R.string.contacts_not_accepting_from, pairing.otherUserName),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = WakeTheme.status.warning,
+                        )
+                    }
                     if (pairing.iCanWakeThem && !pairing.theyAcceptWakes) {
                         Text(
                             stringResource(R.string.contacts_they_paused, pairing.otherUserName),
@@ -440,6 +449,30 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
                                 scope.launch {
                                     try {
                                         api.patchPairing(pairing.id, PatchPairingRequest(iCanWakeThem = !pairing.iCanWakeThem)).orThrow()
+                                    } catch (e: Exception) {
+                                        wakeStatus = WakeStatus(StatusKind.ERROR, context.getString(R.string.contacts_setting_failed, e.toUserMessage(context)))
+                                    }
+                                    onChanged()
+                                }
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    stringResource(
+                                        if (pairing.iAcceptFromThem) R.string.contacts_accept_from_off else R.string.contacts_accept_from_on,
+                                        pairing.otherUserName,
+                                    )
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(if (pairing.iAcceptFromThem) Icons.Rounded.DoNotDisturbOn else Icons.Rounded.NotificationsActive, null)
+                            },
+                            onClick = {
+                                menuOpen = false
+                                scope.launch {
+                                    try {
+                                        api.patchPairing(pairing.id, PatchPairingRequest(iAcceptFromThem = !pairing.iAcceptFromThem)).orThrow()
                                     } catch (e: Exception) {
                                         wakeStatus = WakeStatus(StatusKind.ERROR, context.getString(R.string.contacts_setting_failed, e.toUserMessage(context)))
                                     }

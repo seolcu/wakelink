@@ -45,10 +45,16 @@ data class PairingView(
     @Json(name = "other_public_key") val otherPublicKey: String? = null,
     /** False while the contact has switched off receiving wake-ups in their app. */
     @Json(name = "they_accept_wakes") val theyAcceptWakes: Boolean = true,
+    /** My own per-contact switch: whether I accept wakes from them. */
+    @Json(name = "i_accept_from_them") val iAcceptFromThem: Boolean = true,
 )
 
+/** Each field is optional; null leaves that switch as it is. */
 data class PatchPairingRequest(
-    @Json(name = "i_can_wake_them") val iCanWakeThem: Boolean,
+    /** My permission to wake them (my outbound direction). */
+    @Json(name = "i_can_wake_them") val iCanWakeThem: Boolean? = null,
+    /** Whether I accept wakes from them (my inbound consent). */
+    @Json(name = "i_accept_from_them") val iAcceptFromThem: Boolean? = null,
 )
 
 data class TriggerResponse(

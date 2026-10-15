@@ -249,10 +249,13 @@
     <string name="update_channel_name">App updates</string>
     <string name="update_notification_title">WakeLink %1$s is available</string>
     <string name="update_notification_body">Tap to update</string>
-    <string name="contacts_they_paused">%1$s has switched off receiving wake-ups for now</string>
+    <string name="contacts_they_paused">%1$s isn\'t receiving wake-ups right now</string>
     <string name="contacts_wake_paused">They\'re not receiving wake-ups</string>
-    <string name="error_recipient_not_accepting">They\'ve switched off receiving wake-ups right now</string>
+    <string name="error_recipient_not_accepting">They aren\'t receiving wake-ups right now</string>
     <string name="contacts_account_lost_title">Your account wasn\'t found</string>
     <string name="contacts_account_lost_body">The server doesn\'t recognize this phone anymore (the account may have been deleted). Register again to keep using WakeLink; you\'ll need to swap invite codes again.</string>
     <string name="contacts_account_lost_register">Register again</string>
+    <string name="contacts_accept_from_off">Stop receiving wake-ups from %1$s</string>
+    <string name="contacts_accept_from_on">Receive wake-ups from %1$s again</string>
+    <string name="contacts_not_accepting_from">You\'re not receiving wake-ups from %1$s</string>
 </resources>

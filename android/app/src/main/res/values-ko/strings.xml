@@ -246,10 +246,13 @@
     <string name="update_channel_name">앱 업데이트</string>
     <string name="update_notification_title">WakeLink %1$s 버전이 나왔어요</string>
     <string name="update_notification_body">눌러서 업데이트하세요</string>
-    <string name="contacts_they_paused">%1$s님이 지금 깨우기 받기를 꺼 뒀어요</string>
+    <string name="contacts_they_paused">%1$s님이 지금은 깨우기를 받지 않아요</string>
     <string name="contacts_wake_paused">상대가 깨우기를 꺼 둠</string>
-    <string name="error_recipient_not_accepting">상대가 지금 깨우기 받기를 꺼 뒀어요</string>
+    <string name="error_recipient_not_accepting">상대가 지금은 깨우기를 받지 않아요</string>
     <string name="contacts_account_lost_title">계정을 찾을 수 없어요</string>
     <string name="contacts_account_lost_body">서버가 이 폰을 더 이상 알아보지 못해요(계정이 삭제됐을 수 있어요). 계속 쓰려면 다시 등록하고 초대 코드를 새로 주고받아야 해요.</string>
     <string name="contacts_account_lost_register">다시 등록하기</string>
+    <string name="contacts_accept_from_off">%1$s님의 깨우기 받지 않기</string>
+    <string name="contacts_accept_from_on">%1$s님의 깨우기 다시 받기</string>
+    <string name="contacts_not_accepting_from">%1$s님의 깨우기를 받지 않는 중이에요</string>
 </resources>
