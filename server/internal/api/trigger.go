@@ -118,6 +118,12 @@ func (s *Server) handleTrigger(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
+	if !recipient.AcceptingWakes {
+		// Their app would just drop it; say so now instead of letting the
+		// sender wait for an ack that never comes.
+		writeError(w, http.StatusConflict, "recipient is not accepting wakes")
+		return
+	}
 	if !recipient.FCMToken.Valid || recipient.FCMToken.String == "" {
 		writeError(w, http.StatusUnprocessableEntity, "recipient device is not registered for push")
 		return

@@ -49,6 +49,12 @@ Notes:
 - Nothing here lets one side see the other's location, messages, contacts,
   or any data beyond: display name, whether they can currently wake you,
   and the timestamps of past triggers.
+- Separately from per-pairing permissions, each person has a "receiving
+  wake-ups" switch. While it's off, contacts see that, the wake button is
+  disabled, and the server refuses wakes (409) instead of sending them.
+- Separately from per-pairing permissions, each person has a "receiving
+  wake-ups" switch. While it's off, contacts see that, the wake button is
+  disabled, and the server refuses wakes (409) instead of sending them.
 - A wake can carry a sound and a picture the sender picked (built-in
   sounds, a short voice recording, an audio file, a photo or GIF). The
   receiver decides what to honor: "sounds chosen by others" can be limited

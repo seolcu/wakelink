@@ -8,13 +8,14 @@ import (
 )
 
 type meView struct {
-	UserID      int64  `json:"user_id"`
-	DisplayName string `json:"display_name"`
+	UserID         int64  `json:"user_id"`
+	DisplayName    string `json:"display_name"`
+	AcceptingWakes bool   `json:"accepting_wakes"`
 }
 
 func (s *Server) handleGetMe(w http.ResponseWriter, r *http.Request) {
 	user := userFromContext(r)
-	writeJSON(w, http.StatusOK, meView{UserID: user.ID, DisplayName: user.DisplayName})
+	writeJSON(w, http.StatusOK, meView{UserID: user.ID, DisplayName: user.DisplayName, AcceptingWakes: user.AcceptingWakes})
 }
 
 type patchMeRequest struct {
@@ -40,7 +41,7 @@ func (s *Server) handlePatchMe(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to update display name")
 		return
 	}
-	writeJSON(w, http.StatusOK, meView{UserID: user.ID, DisplayName: name})
+	writeJSON(w, http.StatusOK, meView{UserID: user.ID, DisplayName: name, AcceptingWakes: user.AcceptingWakes})
 }
 
 // handleDeleteMe permanently deletes the caller's account: every pairing
@@ -96,6 +97,26 @@ func (s *Server) handlePutPublicKey(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := s.DB.SetPublicKey(r.Context(), user.ID, req.PublicKey); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to save public key")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+type acceptingRequest struct {
+	Accepting *bool `json:"accepting"`
+}
+
+// handlePutAccepting mirrors the app's "receiving wake-ups" switch, so
+// contacts see it and wakes are refused up front while it's off.
+func (s *Server) handlePutAccepting(w http.ResponseWriter, r *http.Request) {
+	user := userFromContext(r)
+	var req acceptingRequest
+	if err := readJSON(w, r, &req); err != nil || req.Accepting == nil {
+		writeError(w, http.StatusBadRequest, "accepting is required")
+		return
+	}
+	if err := s.DB.SetAcceptingWakes(r.Context(), user.ID, *req.Accepting); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to update")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

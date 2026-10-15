@@ -145,6 +145,9 @@ type pairingView struct {
 	// OtherPublicKey is the contact's device key for sealing wakes end to
 	// end; null if their app is too old to have one.
 	OtherPublicKey *string `json:"other_public_key"`
+	// TheyAcceptWakes is false while the contact has switched off
+	// receiving wake-ups in their app (independent of permissions).
+	TheyAcceptWakes bool `json:"they_accept_wakes"`
 }
 
 func (s *Server) handleListPairings(w http.ResponseWriter, r *http.Request) {
@@ -173,7 +176,7 @@ func (s *Server) handleListPairings(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			continue
 		}
-		view := pairingView{ID: p.ID, OtherUserName: other.DisplayName, CreatedAt: p.CreatedAt}
+		view := pairingView{ID: p.ID, OtherUserName: other.DisplayName, CreatedAt: p.CreatedAt, TheyAcceptWakes: other.AcceptingWakes}
 		if other.PublicKey.Valid {
 			view.OtherPublicKey = &other.PublicKey.String
 		}

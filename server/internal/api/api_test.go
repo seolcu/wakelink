@@ -702,3 +702,32 @@ func TestRegisterIsThrottledPerIP(t *testing.T) {
 		t.Fatalf("different client: expected 201, got %d", rec.Code)
 	}
 }
+
+func TestWakesRefusedWhileRecipientIsNotAccepting(t *testing.T) {
+	s, sender := newTestServer(t)
+	s.RateLimit.Cooldown = 0
+	router := s.Router()
+	alice, bob, pairingID := pairUp(t, router)
+
+	if rec := doJSON(t, router, http.MethodPut, "/v1/me/accepting", alice.APIKey, map[string]any{}); rec.Code != http.StatusBadRequest {
+		t.Fatalf("missing field: expected 400, got %d", rec.Code)
+	}
+	if rec := doJSON(t, router, http.MethodPut, "/v1/me/accepting", alice.APIKey, map[string]bool{"accepting": false}); rec.Code != http.StatusNoContent {
+		t.Fatalf("switch off: status %d", rec.Code)
+	}
+	if got := listPairings(t, router, bob.APIKey); got[0].TheyAcceptWakes {
+		t.Fatalf("Bob should see that Alice isn't accepting wakes")
+	}
+	rec := doJSON(t, router, http.MethodPost, pairingPath(pairingID)+"/trigger", bob.APIKey, nil)
+	if rec.Code != http.StatusConflict || len(sender.messages) != 0 {
+		t.Fatalf("expected 409 and no push, got %d with %d pushes", rec.Code, len(sender.messages))
+	}
+
+	doJSON(t, router, http.MethodPut, "/v1/me/accepting", alice.APIKey, map[string]bool{"accepting": true})
+	if got := listPairings(t, router, bob.APIKey); !got[0].TheyAcceptWakes {
+		t.Fatalf("Bob should see Alice accepting again")
+	}
+	if rec := doJSON(t, router, http.MethodPost, pairingPath(pairingID)+"/trigger", bob.APIKey, nil); rec.Code != http.StatusCreated {
+		t.Fatalf("after switching back on: status %d", rec.Code)
+	}
+}

@@ -245,6 +245,24 @@ There is no always-on notification (it was dropped in 0.3.1 as noise; the
 app deletes the old channel on start). Whether this phone can be woken is
 shown, with a switch, at the top of `ContactsScreen` instead.
 
+That "receiving wake-ups" switch (`armed`) is stored on the phone (the
+alarm path reads it, even before unlock) **and** mirrored to the server via
+`ArmedSync` (`PUT /v1/me/accepting`, re-sent on every unlocked start).
+Contacts see it as `they_accept_wakes`, and `handleTrigger` refuses wakes
+with 409 while it's off -- otherwise a wake would be dropped on the
+receiver while the sender waits for an ack. Always change it through
+`ArmedSync.set`, which also silences a wake that's ringing at the time.
+Self-test alarms (trigger id < 0) ignore the switch.
+
+That "receiving wake-ups" switch (`armed`) is stored on the phone (the
+alarm path reads it, even before unlock) **and** mirrored to the server via
+`ArmedSync` (`PUT /v1/me/accepting`, re-sent on every unlocked start).
+Contacts see it as `they_accept_wakes`, and `handleTrigger` refuses wakes
+with 409 while it's off -- otherwise a wake would be dropped on the
+receiver while the sender waits for an ack. Always change it through
+`ArmedSync.set`, which also silences a wake that's ringing at the time.
+Self-test alarms (trigger id < 0) ignore the switch.
+
 `status/SetupScreen.kt` is the "get ready" checklist (notifications,
 full-screen alarms, battery optimization, background restriction / Samsung
 sleeping apps -- detected via `isBackgroundRestricted` and the restricted

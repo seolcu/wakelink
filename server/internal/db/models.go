@@ -9,6 +9,8 @@ type User struct {
 	APIKeyHash  string
 	CreatedAt   int64
 	PublicKey   sql.NullString
+	// AcceptingWakes mirrors the app's "receiving wake-ups" switch.
+	AcceptingWakes bool
 }
 
 type Invite struct {
