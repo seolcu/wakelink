@@ -43,6 +43,8 @@ data class PairingView(
     @Json(name = "created_at") val createdAt: Long,
     /** The contact's device key for sealing wakes end to end; null if their app predates it. */
     @Json(name = "other_public_key") val otherPublicKey: String? = null,
+    /** False while the contact has switched off receiving wake-ups in their app. */
+    @Json(name = "they_accept_wakes") val theyAcceptWakes: Boolean = true,
 )
 
 data class PatchPairingRequest(
@@ -83,6 +85,8 @@ data class RotateKeyResponse(
  * null for none.
  */
 data class TriggerRequest(val sound: String? = null, val image: String? = null, val sealed: String? = null)
+
+data class AcceptingRequest(val accepting: Boolean)
 
 data class PublicKeyRequest(@Json(name = "public_key") val publicKey: String)
 

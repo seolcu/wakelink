@@ -29,6 +29,9 @@ interface WakeLinkApi {
     @POST("v1/me/rotate-key")
     suspend fun rotateApiKey(): RotateKeyResponse
 
+    @PUT("v1/me/accepting")
+    suspend fun putAccepting(@Body body: AcceptingRequest): Response<Unit>
+
     @PUT("v1/me/public-key")
     suspend fun putPublicKey(@Body body: PublicKeyRequest): Response<Unit>
 

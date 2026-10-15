@@ -69,6 +69,7 @@ import androidx.core.content.ContextCompat
 import app.wakelink.android.BuildConfig
 import app.wakelink.android.R
 import app.wakelink.android.alarm.AlarmForegroundService
+import app.wakelink.android.data.ArmedSync
 import app.wakelink.android.data.DismissMode
 import app.wakelink.android.data.SettingsRepository
 import app.wakelink.android.data.SoundPolicy
@@ -228,7 +229,7 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                     trailing = {
                         Switch(checked = armed, onCheckedChange = { value ->
                             armed = value
-                            scope.launch { settings.setArmed(value) }
+                            scope.launch { ArmedSync.set(context, value) }
                         })
                     },
                 )

@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.os.Build
 import app.wakelink.android.alarm.AckSender
 import app.wakelink.android.crypto.KeyPublisher
+import app.wakelink.android.data.ArmedSync
 import app.wakelink.android.data.SettingsRepository
 import app.wakelink.android.data.isUserUnlocked
 import app.wakelink.android.data.restorePendingDndOverride
@@ -62,6 +63,7 @@ class WakeLinkApplication : Application() {
             uploadCurrentFcmToken(this@WakeLinkApplication)
             UpdateCheckWorker.schedule(this@WakeLinkApplication)
             KeyPublisher.publish(this@WakeLinkApplication)
+            ArmedSync.syncCurrent(this@WakeLinkApplication)
             AckSender.flushPending(this@WakeLinkApplication)
         }
     }

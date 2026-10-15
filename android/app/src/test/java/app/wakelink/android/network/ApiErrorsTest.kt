@@ -22,6 +22,8 @@ class ApiErrorsTest {
         assertEquals(UiText(R.string.error_cooldown), userMessageFor(429, "cooldown active, try again shortly"))
         assertEquals(UiText(R.string.error_invite_used), userMessageFor(409, "invite already used"))
         assertEquals(UiText(R.string.error_already_paired), userMessageFor(409, "already paired"))
+        assertEquals(UiText(R.string.error_recipient_not_accepting), userMessageFor(409, "recipient is not accepting wakes"))
+        assertEquals(UiText(R.string.error_recipient_not_accepting), userMessageFor(409, "recipient is not accepting wakes"))
         assertEquals(UiText(R.string.error_self_pair), userMessageFor(400, "cannot pair with yourself"))
     }
 

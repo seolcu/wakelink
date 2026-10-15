@@ -142,6 +142,11 @@ class MainActivity : ComponentActivity() {
                                 onOpenPairing = { navController.navigate("pairing") },
                                 onOpenSettings = { navController.navigate("settings") },
                                 onOpenSetup = { navController.navigate("setup") },
+                                onAccountLost = {
+                                    navController.navigate("register") {
+                                        popUpTo(navController.graph.id) { inclusive = true }
+                                    }
+                                },
                             )
                         }
                         composable(

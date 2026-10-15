@@ -72,6 +72,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.wakelink.android.R
 import app.wakelink.android.crypto.WakeComposer
+import app.wakelink.android.data.ArmedSync
 import app.wakelink.android.data.SettingsRepository
 import app.wakelink.android.data.TokenStore
 import app.wakelink.android.images.ImagePickerSheet
@@ -97,6 +98,7 @@ import app.wakelink.android.ui.theme.WakeTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 
 private const val ACK_POLL_INTERVAL_MS = 2_000L
 private const val ACK_POLL_ATTEMPTS = 30 // ~60s: long enough for a dozing phone to wake on a high-priority push
@@ -123,7 +125,7 @@ private data class WakeStatus(val kind: StatusKind, val text: String)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ContactsScreen(onOpenPairing: () -> Unit, onOpenSettings: () -> Unit, onOpenSetup: () -> Unit) {
+fun ContactsScreen(onOpenPairing: () -> Unit, onOpenSettings: () -> Unit, onOpenSetup: () -> Unit, onAccountLost: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val tokenStore = remember { TokenStore(context) }
@@ -137,21 +139,29 @@ fun ContactsScreen(onOpenPairing: () -> Unit, onOpenSettings: () -> Unit, onOpen
     val settings = remember { SettingsRepository(context) }
     val armed by settings.armed.collectAsState(initial = true)
 
-    suspend fun reload() {
-        loading = true
+    var accountLost by remember { mutableStateOf(false) }
+
+    /** [silent]: refresh in place (on resume) without the pull-to-refresh spinner. */
+    suspend fun reload(silent: Boolean = false) {
+        if (!silent) loading = true
         try {
             pairings = api.listPairings()
             loadError = null
         } catch (e: Exception) {
+            // The server no longer knows this API key (account deleted, or the
+            // server's data was reset): retrying can't help, so offer a way out.
+            if (e is HttpException && e.code() == 401) accountLost = true
             loadError = context.getString(R.string.contacts_load_failed, e.toUserMessage(context))
         } finally {
             loading = false
         }
     }
 
-    LaunchedEffect(Unit) { reload() }
-
     OnResume {
+        // Contacts change behind our back -- unpairing, permission and
+        // "receiving" switches, a reinstalled phone's new key -- so refresh
+        // whenever the screen comes back, not just once.
+        scope.launch { reload(silent = pairings.isNotEmpty()) }
         scope.launch {
             val readiness = DeviceReadiness.check(context)
             warnings.clear()
@@ -170,6 +180,23 @@ fun ContactsScreen(onOpenPairing: () -> Unit, onOpenSettings: () -> Unit, onOpen
                 popupWarnings = warnings.toList()
             }
         }
+    }
+
+    if (accountLost) {
+        AlertDialog(
+            onDismissRequest = {},
+            icon = { Icon(Icons.Rounded.WarningAmber, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text(stringResource(R.string.contacts_account_lost_title)) },
+            text = { Text(stringResource(R.string.contacts_account_lost_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    accountLost = false
+                    tokenStore.clear()
+                    onAccountLost()
+                }) { Text(stringResource(R.string.contacts_account_lost_register)) }
+            },
+            dismissButton = { TextButton(onClick = { accountLost = false }) { Text(stringResource(R.string.setup_later)) } },
+        )
     }
 
     if (popupWarnings.isNotEmpty()) {
@@ -233,7 +260,7 @@ fun ContactsScreen(onOpenPairing: () -> Unit, onOpenSettings: () -> Unit, onOpen
                 // Whether contacts can wake this phone is always visible here
                 // (it used to be an always-on notification).
                 item(key = "armed") {
-                    ArmedCard(armed) { value -> scope.launch { settings.setArmed(value) } }
+                    ArmedCard(armed) { value -> scope.launch { ArmedSync.set(context, value) } }
                 }
                 if (warnings.isNotEmpty()) {
                     item(key = "warnings") { WarningsBanner(warnings, onOpenSettings) }
@@ -350,8 +377,18 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
     var pickingImage by remember { mutableStateOf(false) }
     var mySounds by remember { mutableStateOf<List<MediaView>?>(null) }
     var pickingSound by remember { mutableStateOf(false) }
+    // A recording/picture picked here may since have been deleted (or be
+    // unusable on this phone); drop such a stale choice instead of showing it.
     LaunchedEffect(soundKey) {
-        if (parseSoundRef(soundKey) is SoundRef.Custom) mySounds = runCatching { api.listSounds() }.getOrNull()
+        val ref = parseSoundRef(soundKey) as? SoundRef.Custom ?: return@LaunchedEffect
+        val list = runCatching { api.listSounds() }.getOrNull() ?: return@LaunchedEffect
+        mySounds = list
+        if (list.none { it.id == ref.id }) settings.setSoundForPairing(pairing.id, null)
+    }
+    LaunchedEffect(imageKey) {
+        val ref = parseSoundRef(imageKey) as? SoundRef.Custom ?: return@LaunchedEffect
+        val list = runCatching { api.listImages() }.getOrNull() ?: return@LaunchedEffect
+        if (list.none { it.id == ref.id }) settings.setImageForPairing(pairing.id, null)
     }
     var wakeStatus by remember { mutableStateOf<WakeStatus?>(null) }
     var waking by remember { mutableStateOf(false) }
@@ -380,6 +417,13 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    if (pairing.iCanWakeThem && !pairing.theyAcceptWakes) {
+                        Text(
+                            stringResource(R.string.contacts_they_paused, pairing.otherUserName),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = WakeTheme.status.warning,
+                        )
+                    }
                 }
                 Box {
                     IconButton(onClick = { menuOpen = true }) {
@@ -416,7 +460,7 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
             }
 
             Button(
-                enabled = pairing.iCanWakeThem && !waking,
+                enabled = pairing.iCanWakeThem && pairing.theyAcceptWakes && !waking,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.secondary,
                     contentColor = MaterialTheme.colorScheme.onSecondary,
@@ -431,6 +475,9 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
                                 api.trigger(pairing.id, WakeComposer.request(context, api, pairing, soundKey, imageKey)).triggerId
                             } catch (e: Exception) {
                                 wakeStatus = WakeStatus(StatusKind.ERROR, context.getString(R.string.contacts_send_failed, e.toUserMessage(context)))
+                                // e.g. unpaired, permission revoked or receiving switched off
+                                // meanwhile: show the current state rather than the stale card.
+                                onChanged()
                                 return@launch
                             }
                             // Sent is not rang: keep the user waiting on the
@@ -453,7 +500,16 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
             ) {
                 Icon(Icons.Rounded.Alarm, contentDescription = null)
                 Spacer(Modifier.size(8.dp))
-                Text(stringResource(if (pairing.iCanWakeThem) R.string.contacts_wake else R.string.contacts_wake_off), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    stringResource(
+                        when {
+                            !pairing.iCanWakeThem -> R.string.contacts_wake_off
+                            !pairing.theyAcceptWakes -> R.string.contacts_wake_paused
+                            else -> R.string.contacts_wake
+                        }
+                    ),
+                    style = MaterialTheme.typography.titleMedium,
+                )
             }
 
             if (pairing.iCanWakeThem) {

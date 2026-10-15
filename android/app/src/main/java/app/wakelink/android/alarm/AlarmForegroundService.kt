@@ -107,7 +107,9 @@ class AlarmForegroundService : Service() {
 
         startJob = scope.launch {
             val settings = SettingsRepository(applicationContext)
-            if (!settings.armed.first()) {
+            // A self-test (triggerId < 0) is started by the user on this very
+            // phone, so it rings even while receiving wake-ups is switched off.
+            if (triggerId >= 0 && !settings.armed.first()) {
                 stopRinging()
                 return@launch
             }

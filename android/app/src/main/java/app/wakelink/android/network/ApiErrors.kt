@@ -43,6 +43,7 @@ fun userMessageFor(status: Int?, serverError: String?): UiText = when (status) {
         else -> UiText(R.string.error_not_found)
     }
     409 -> when (serverError) {
+        "recipient is not accepting wakes" -> UiText(R.string.error_recipient_not_accepting)
         "invite already used" -> UiText(R.string.error_invite_used)
         "already paired" -> UiText(R.string.error_already_paired)
         else -> UiText(R.string.error_conflict)
