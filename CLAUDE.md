@@ -111,7 +111,11 @@ in-app updater (`android/.../update/AppUpdater.kt`) reads
 `https://wake.seolcu.com/download` (`APK_DOWNLOAD_URL`, `GET /download`)
 redirects to `releases/latest/download/wakelink.apk`. Release notes are
 bilingual, English first: a `## English` section, then `## 한국어` with the
-same content. Always sign with the
+same content -- the update dialog (`update/ReleaseNotes.kt`) splits on
+exactly those headings, renders the markdown subset we use (headings,
+bullets, quotes, `**bold**`) and shows the app's language first.
+`UpdateCheckWorker` also checks every 12 hours in the background and posts
+a one-time "new version" notification, for people who rarely open the app. Always sign with the
 same key -- Android rejects an update signed differently, and a debug
 build can't be updated to a release build (uninstall first).
 
@@ -237,8 +241,14 @@ contacts in `GET /v1/pairings` (`other_public_key`).
 
 ### Readiness
 
+There is no always-on notification (it was dropped in 0.3.1 as noise; the
+app deletes the old channel on start). Whether this phone can be woken is
+shown, with a switch, at the top of `ContactsScreen` instead.
+
 `status/SetupScreen.kt` is the "get ready" checklist (notifications,
-full-screen alarms, battery optimization, a Samsung sleeping-apps pointer).
+full-screen alarms, battery optimization, background restriction / Samsung
+sleeping apps -- detected via `isBackgroundRestricted` and the restricted
+standby bucket -- and DND access when "ring through Total silence" is on).
 MainActivity opens it after registering and on any launch where
 `DeviceReadiness.allReady` is false; `ContactsScreen` additionally pops a
 dialog when a problem appears while the app is in use. Prefer dialogs and
@@ -288,6 +298,11 @@ handlers per `mediaCategory`, sounds and images) plus the bearer-token auth midd
 `server/internal/ratelimit` re-derives cooldown/daily-cap state from the
 `triggers` table on every check rather than keeping in-memory counters,
 so limits survive process restarts for free at this project's scale.
+`ratelimit.Window` is the in-memory exception: it throttles unauthenticated
+`/v1/register` per client IP (`REGISTER_LIMIT_PER_HOUR`, default 10). The
+client IP comes only from the proxy-set `X-Forwarded-For` (the
+`forwardedFor` middleware); never trust `X-Real-IP`/`True-Client-IP`,
+which clients can set freely.
 
 `server/internal/web` is the public website, embedded with `go:embed`
 (no build step), in Korean and English: `templates/<lang>/*.html` share

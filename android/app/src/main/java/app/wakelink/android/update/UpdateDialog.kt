@@ -76,14 +76,7 @@ fun UpdateDialog(info: UpdateInfo, onDismiss: () -> Unit, onSkip: (() -> Unit)? 
                     Step.Prompt -> {
                         Text(stringResource(R.string.update_current, BuildConfig.VERSION_NAME), style = MaterialTheme.typography.bodySmall)
                         if (info.notes.isNotBlank()) {
-                            Text(
-                                info.notes,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier
-                                    .padding(top = 12.dp)
-                                    .heightIn(max = 240.dp)
-                                    .verticalScroll(rememberScrollState()),
-                            )
+                            ReleaseNotesView(info.notes, modifier = Modifier.padding(top = 12.dp))
                         }
                     }
                     is Step.Downloading -> {

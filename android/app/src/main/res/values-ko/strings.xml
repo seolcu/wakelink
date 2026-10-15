@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="armed_notification_channel_name">대기 상태</string>
-    <string name="armed_notification_title_on">WakeLink 대기 중</string>
-    <string name="armed_notification_title_off">WakeLink 비활성화됨</string>
     <string name="alarm_notification_channel_name">깨우기 알람</string>
     <string name="alarm_notification_title">%1$s 님이 깨우고 있어요</string>
     <string name="alarm_stop_action">중지</string>
@@ -40,7 +37,6 @@
     <string name="register_start">시작하기</string>
     <string name="register_failed">등록 실패: %1$s</string>
     <string name="contacts_load_failed">목록을 불러오지 못했어요: %1$s</string>
-    <string name="contacts_warning_disarmed">WakeLink가 비활성화되어 있어 아무도 나를 깨울 수 없어요</string>
     <string name="contacts_warning_notifications">알림이 꺼져 있어 깨우기 알람이 제대로 표시되지 않을 수 있어요</string>
     <string name="contacts_warning_full_screen">전체 화면 알림 권한이 없어 잠금 화면에 알람 화면이 뜨지 않아요</string>
     <string name="contacts_warning_tap">탭해서 설정 열기</string>
@@ -138,8 +134,8 @@
     <string name="settings_update_available">새 버전 %1$s 있어요</string>
     <string name="settings_update_check_failed">확인하지 못했어요: %1$s</string>
     <string name="settings_network_error">네트워크 오류</string>
-    <string name="settings_auto_update">앱 열 때 자동으로 확인</string>
-    <string name="settings_auto_update_hint">새 버전이 있으면 알려줘요. 설치는 직접 확인한 뒤에만 해요</string>
+    <string name="settings_auto_update">새 버전 확인</string>
+    <string name="settings_auto_update_hint">앱을 열 때와 하루 두 번 확인해서 알려줘요. 설치는 직접 확인한 뒤에만 해요</string>
     <string name="settings_rename_title">이름 변경</string>
     <string name="settings_save">저장</string>
     <string name="settings_rotate_title">API 키를 재발급할까요?</string>
@@ -210,7 +206,7 @@
     <string name="setup_full_screen_body">잠긴 폰에 알람 화면을 바로 띄워요</string>
     <string name="setup_battery_body">자는 동안에도 깨우기를 바로 받아요</string>
     <string name="setup_samsung_title">삼성: WakeLink를 절전 앱에서 빼기</string>
-    <string name="setup_samsung_body">애플리케이션 정보 → 배터리에서 \'제한 없음\'을 고르세요. 배터리 → 백그라운드 사용 제한 → 절전 앱 목록에 WakeLink가 없는지도 확인해 주세요.</string>
+    <string name="setup_samsung_body">애플리케이션 정보 → 배터리에서 \'제한 없음\'을 고르고, 배터리 → 백그라운드 사용 제한 → 절전 앱 목록에서 WakeLink를 빼 주세요. 둘 다 되면 체크가 떠요.</string>
     <string name="setup_done">준비 완료</string>
     <string name="setup_later">나중에</string>
     <string name="setup_fix">켜기</string>
@@ -234,4 +230,20 @@
     <string name="settings_show_images">다른 사람이 보낸 사진 표시</string>
     <string name="settings_show_images_hint">깨우기에 첨부된 사진을 알람 화면에 보여줘요</string>
     <string name="media_unusable">%1$s (이 폰에서는 사용할 수 없음)</string>
+    <string name="contacts_warning_background">WakeLink의 백그라운드 실행이 제한되어 있어 깨우기가 오지 않을 수 있어요</string>
+    <string name="contacts_warning_dnd">\'완전 무음\'도 뚫기가 켜져 있지만 방해 금지 액세스 권한이 없어요</string>
+    <string name="contacts_armed_on">깨우기 받는 중</string>
+    <string name="contacts_armed_off">깨우기 꺼짐</string>
+    <string name="setup_background_title">백그라운드 실행 허용</string>
+    <string name="setup_background_body">애플리케이션 정보 → 배터리에서 \'제한 없음\'을 골라야 깨우기가 알람을 띄울 수 있어요</string>
+    <string name="setup_dnd_title">방해 금지 액세스</string>
+    <string name="setup_dnd_body">켜 둔 \'완전 무음\'도 뚫기에 필요해요</string>
+    <string name="settings_display">화면</string>
+    <string name="settings_theme">테마</string>
+    <string name="settings_theme_system">시스템 설정 따르기</string>
+    <string name="settings_theme_light">라이트</string>
+    <string name="settings_theme_dark">다크</string>
+    <string name="update_channel_name">앱 업데이트</string>
+    <string name="update_notification_title">WakeLink %1$s 버전이 나왔어요</string>
+    <string name="update_notification_body">눌러서 업데이트하세요</string>
 </resources>

@@ -1,3 +1,7 @@
+// The framework ExifInterface's InputStream bugs were fixed in Android 7.1;
+// minSdk is 26, so the androidx copy would only add a dependency.
+@file:SuppressLint("ExifInterface")
+
 package app.wakelink.android.images
 
 import android.annotation.SuppressLint
@@ -92,9 +96,6 @@ object ImageUploads {
             }
         }.getOrNull()?.substringBeforeLast('.')?.take(MAX_NAME_LENGTH)?.ifBlank { null } ?: "Photo"
 
-    // The framework ExifInterface's InputStream bugs were fixed in Android 7.1;
-    // minSdk is 26, so the androidx copy would only add a dependency.
-    @SuppressLint("ExifInterface")
     private fun decodeUpright(context: Context, uri: Uri): Bitmap? {
         val resolver = context.contentResolver
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }

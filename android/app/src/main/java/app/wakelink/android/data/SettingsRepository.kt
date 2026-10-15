@@ -20,6 +20,9 @@ private val Context.legacyDataStore by preferencesDataStore(name = "wakelink_set
 
 enum class DismissMode { UNLOCK_REQUIRED, TAP_TO_DISMISS }
 
+/** App appearance; SYSTEM follows the phone's light/dark setting. */
+enum class ThemeMode { SYSTEM, LIGHT, DARK }
+
 /** Whose choice of sound wins when someone wakes this device. */
 enum class SoundPolicy {
     /** Play whatever the sender picked: a built-in sound or their own recording/file. */
@@ -71,6 +74,8 @@ class SettingsRepository(context: Context) {
         const val SOUND_FOR_PAIRING_PREFIX = "sound_for_pairing_"
         const val IMAGE_FOR_PAIRING_PREFIX = "image_for_pairing_"
         const val SHOW_IMAGES = "show_images"
+        const val THEME_MODE = "theme_mode"
+        const val NOTIFIED_UPDATE_VERSION = "notified_update_version"
         const val LEGACY_MIGRATED = "legacy_migrated"
     }
 
@@ -102,6 +107,13 @@ class SettingsRepository(context: Context) {
     /** Show pictures that senders attach to wake-ups on the alarm screen. */
     val showImages: Flow<Boolean> = observe { it.getBoolean(Keys.SHOW_IMAGES, true) }
 
+    val themeMode: Flow<ThemeMode> = observe { p ->
+        ThemeMode.entries.firstOrNull { it.name == p.getString(Keys.THEME_MODE, null) } ?: ThemeMode.SYSTEM
+    }
+
+    /** The newest version a "new version available" notification was already posted for. */
+    val notifiedUpdateVersion: Flow<String?> = observe { it.getString(Keys.NOTIFIED_UPDATE_VERSION, null) }
+
     val autoUpdateCheck: Flow<Boolean> = observe { it.getBoolean(Keys.AUTO_UPDATE_CHECK, true) }
 
     /** Version the user chose "skip" for in the startup update prompt; manual checks ignore it. */
@@ -116,6 +128,8 @@ class SettingsRepository(context: Context) {
     suspend fun setDefaultSound(key: String) = edit { putString(Keys.DEFAULT_SOUND, key) }
     suspend fun setSoundPolicy(value: SoundPolicy) = edit { putString(Keys.SOUND_POLICY, value.name) }
     suspend fun setShowImages(value: Boolean) = edit { putBoolean(Keys.SHOW_IMAGES, value) }
+    suspend fun setThemeMode(value: ThemeMode) = edit { putString(Keys.THEME_MODE, value.name) }
+    suspend fun setNotifiedUpdateVersion(value: String) = edit { putString(Keys.NOTIFIED_UPDATE_VERSION, value) }
     suspend fun setAutoUpdateCheck(value: Boolean) = edit { putBoolean(Keys.AUTO_UPDATE_CHECK, value) }
     suspend fun setSkippedUpdateVersion(value: String) = edit { putString(Keys.SKIPPED_UPDATE_VERSION, value) }
 

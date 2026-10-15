@@ -57,7 +57,7 @@ Android's silent mode mutes ringtones and notification sounds, but **not the ala
 - **Mutual pairing**: one person creates an invite code and the other has to type it in. Nobody can be added behind their back.
 - **Permission per direction**: "I can wake you, but you can't wake me" is a valid setup, and each side controls its own.
 - **Always revocable**: turn the app off, block one person, or disconnect entirely, anytime.
-- **Never hidden**: while people can wake you, a persistent notification says so.
+- **Always in view**: the top of the app shows whether you can currently be woken, with a switch to turn it off.
 - **No spamming**: one wake-up per person every 30 seconds, at most 20 per 24 hours.
 - **Private by design**: wake details and uploads are end-to-end encrypted when both apps support it; uploads can only be fetched by people the uploader may wake, and are deleted with the account.
 

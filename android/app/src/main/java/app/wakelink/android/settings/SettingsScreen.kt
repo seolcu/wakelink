@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.BatteryAlert
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.DoNotDisturbOn
 import androidx.compose.material.icons.rounded.Edit
@@ -71,6 +72,7 @@ import app.wakelink.android.alarm.AlarmForegroundService
 import app.wakelink.android.data.DismissMode
 import app.wakelink.android.data.SettingsRepository
 import app.wakelink.android.data.SoundPolicy
+import app.wakelink.android.data.ThemeMode
 import app.wakelink.android.data.TokenStore
 import app.wakelink.android.network.ApiClient
 import app.wakelink.android.network.PatchMeRequest
@@ -82,7 +84,6 @@ import app.wakelink.android.sounds.SoundPreview
 import app.wakelink.android.sounds.SoundRef
 import app.wakelink.android.sounds.parseSoundRef
 import app.wakelink.android.sounds.soundLabel
-import app.wakelink.android.status.ArmedStatusNotifier
 import app.wakelink.android.status.DeviceReadiness
 import app.wakelink.android.ui.OnResume
 import app.wakelink.android.ui.components.Avatar
@@ -92,6 +93,7 @@ import app.wakelink.android.ui.components.StatusKind
 import app.wakelink.android.ui.components.StatusPill
 import app.wakelink.android.ui.theme.WakeTheme
 import app.wakelink.android.update.AppUpdater
+import app.wakelink.android.update.UpdateCheckWorker
 import app.wakelink.android.update.UpdateDialog
 import app.wakelink.android.update.UpdateInfo
 import kotlin.math.roundToInt
@@ -115,6 +117,8 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
     var defaultSound by remember { mutableStateOf(SettingsRepository.DEFAULT_SOUND_KEY) }
     var soundPolicy by remember { mutableStateOf(SoundPolicy.ALLOW_ALL) }
     var showImages by remember { mutableStateOf(true) }
+    var themeMode by remember { mutableStateOf(ThemeMode.SYSTEM) }
+    var pickingTheme by remember { mutableStateOf(false) }
     var pickingDefaultSound by remember { mutableStateOf(false) }
     var pickingPolicy by remember { mutableStateOf(false) }
     var dndAccessGranted by remember { mutableStateOf(false) }
@@ -141,6 +145,7 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
         defaultSound = settings.defaultSound.first()
         soundPolicy = settings.soundPolicy.first()
         showImages = settings.showImages.first()
+        themeMode = settings.themeMode.first()
         autoUpdateCheck = settings.autoUpdateCheck.first()
         try {
             myName = api.getMe().displayName
@@ -223,10 +228,7 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                     trailing = {
                         Switch(checked = armed, onCheckedChange = { value ->
                             armed = value
-                            scope.launch {
-                                settings.setArmed(value)
-                                ArmedStatusNotifier.update(context, value)
-                            }
+                            scope.launch { settings.setArmed(value) }
                         })
                     },
                 )
@@ -354,6 +356,15 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                 }
             }
 
+            SectionCard(stringResource(R.string.settings_display)) {
+                SettingsRow(
+                    icon = Icons.Rounded.DarkMode,
+                    title = stringResource(R.string.settings_theme),
+                    supporting = stringResource(themeLabel(themeMode)),
+                    onClick = { pickingTheme = true },
+                )
+            }
+
             if (AppUpdater.isEnabled) {
                 SectionCard(stringResource(R.string.settings_updates)) {
                     SettingsRow(
@@ -394,6 +405,7 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                             Switch(checked = autoUpdateCheck, onCheckedChange = { value ->
                                 autoUpdateCheck = value
                                 scope.launch { settings.setAutoUpdateCheck(value) }
+                                if (value) UpdateCheckWorker.schedule(context) else UpdateCheckWorker.cancel(context)
                             })
                         },
                     )
@@ -447,33 +459,33 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
         )
     }
 
-    if (pickingPolicy) {
-        AlertDialog(
-            onDismissRequest = { pickingPolicy = false },
-            icon = { Icon(Icons.Rounded.RecordVoiceOver, contentDescription = null) },
-            title = { Text(stringResource(R.string.settings_sound_policy)) },
-            text = {
-                Column {
-                    SoundPolicy.entries.forEach { policy ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    soundPolicy = policy
-                                    scope.launch { settings.setSoundPolicy(policy) }
-                                    pickingPolicy = false
-                                }
-                                .padding(vertical = 4.dp),
-                        ) {
-                            RadioButton(selected = soundPolicy == policy, onClick = null)
-                            Text(stringResource(soundPolicyLabel(policy)), modifier = Modifier.padding(start = 12.dp))
-                        }
-                    }
-                }
+    if (pickingTheme) {
+        ChoiceDialog(
+            icon = Icons.Rounded.DarkMode,
+            title = stringResource(R.string.settings_theme),
+            options = ThemeMode.entries.map { it to stringResource(themeLabel(it)) },
+            selected = themeMode,
+            onSelect = { mode ->
+                themeMode = mode
+                scope.launch { settings.setThemeMode(mode) }
+                pickingTheme = false
             },
-            confirmButton = {},
-            dismissButton = { TextButton(onClick = { pickingPolicy = false }) { Text(stringResource(R.string.common_cancel)) } },
+            onDismiss = { pickingTheme = false },
+        )
+    }
+
+    if (pickingPolicy) {
+        ChoiceDialog(
+            icon = Icons.Rounded.RecordVoiceOver,
+            title = stringResource(R.string.settings_sound_policy),
+            options = SoundPolicy.entries.map { it to stringResource(soundPolicyLabel(it)) },
+            selected = soundPolicy,
+            onSelect = { policy ->
+                soundPolicy = policy
+                scope.launch { settings.setSoundPolicy(policy) }
+                pickingPolicy = false
+            },
+            onDismiss = { pickingPolicy = false },
         )
     }
 
@@ -562,4 +574,45 @@ private fun soundPolicyLabel(policy: SoundPolicy): Int = when (policy) {
     SoundPolicy.ALLOW_ALL -> R.string.settings_sound_policy_all
     SoundPolicy.PRESETS_ONLY -> R.string.settings_sound_policy_presets
     SoundPolicy.MINE_ONLY -> R.string.settings_sound_policy_mine
+}
+
+private fun themeLabel(mode: ThemeMode): Int = when (mode) {
+    ThemeMode.SYSTEM -> R.string.settings_theme_system
+    ThemeMode.LIGHT -> R.string.settings_theme_light
+    ThemeMode.DARK -> R.string.settings_theme_dark
+}
+
+/** A single-choice dialog: tapping an option picks it and closes. */
+@Composable
+private fun <T> ChoiceDialog(
+    icon: ImageVector,
+    title: String,
+    options: List<Pair<T, String>>,
+    selected: T,
+    onSelect: (T) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(icon, contentDescription = null) },
+        title = { Text(title) },
+        text = {
+            Column {
+                options.forEach { (value, label) ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(value) }
+                            .padding(vertical = 4.dp),
+                    ) {
+                        RadioButton(selected = selected == value, onClick = null)
+                        Text(label, modifier = Modifier.padding(start = 12.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } },
+    )
 }

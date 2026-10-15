@@ -10,12 +10,11 @@ import app.wakelink.android.data.SettingsRepository
 import app.wakelink.android.data.isUserUnlocked
 import app.wakelink.android.data.restorePendingDndOverride
 import app.wakelink.android.fcm.uploadCurrentFcmToken
-import app.wakelink.android.status.ArmedStatusNotifier
+import app.wakelink.android.update.UpdateCheckWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class WakeLinkApplication : Application() {
@@ -49,10 +48,6 @@ class WakeLinkApplication : Application() {
             settings.migrateLegacyIfNeeded()
             restorePendingDndOverride(this@WakeLinkApplication)
         }
-        appScope.launch {
-            startupRestore.join()
-            ArmedStatusNotifier.update(this@WakeLinkApplication, settings.armed.first())
-        }
         if (isUserUnlocked(this)) onUserUnlocked()
     }
 
@@ -65,6 +60,7 @@ class WakeLinkApplication : Application() {
         appScope.launch {
             startupRestore.join()
             uploadCurrentFcmToken(this@WakeLinkApplication)
+            UpdateCheckWorker.schedule(this@WakeLinkApplication)
             KeyPublisher.publish(this@WakeLinkApplication)
             AckSender.flushPending(this@WakeLinkApplication)
         }
@@ -74,11 +70,16 @@ class WakeLinkApplication : Application() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val nm = getSystemService(NotificationManager::class.java)
 
+        // Before 0.3.1 an always-on "WakeLink is on standby" notification
+        // lived here; it was noise, so drop it and its channel on upgrade.
+        nm.cancel(LEGACY_ARMED_NOTIFICATION_ID)
+        nm.deleteNotificationChannel(LEGACY_CHANNEL_ARMED)
+
         nm.createNotificationChannel(
             NotificationChannel(
-                CHANNEL_ARMED,
-                getString(R.string.armed_notification_channel_name),
-                NotificationManager.IMPORTANCE_LOW,
+                CHANNEL_UPDATES,
+                getString(R.string.update_channel_name),
+                NotificationManager.IMPORTANCE_DEFAULT,
             )
         )
 
@@ -100,7 +101,9 @@ class WakeLinkApplication : Application() {
     }
 
     companion object {
-        const val CHANNEL_ARMED = "armed_status"
+        const val CHANNEL_UPDATES = "app_updates"
+        private const val LEGACY_CHANNEL_ARMED = "armed_status"
+        private const val LEGACY_ARMED_NOTIFICATION_ID = 1
         const val CHANNEL_ALARM = "wake_alarm"
     }
 }

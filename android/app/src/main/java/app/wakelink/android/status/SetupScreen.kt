@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.PhoneLocked
 import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.DoNotDisturbOn
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -32,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,14 +68,12 @@ fun SetupScreen(onDone: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var readiness by remember { mutableStateOf(DeviceReadiness.check(context)) }
+    val dndBypass by remember { SettingsRepository(context).dndBypassEnabled }.collectAsState(initial = false)
 
     OnResume { readiness = DeviceReadiness.check(context) }
 
     fun refresh() {
         readiness = DeviceReadiness.check(context)
-        scope.launch {
-            ArmedStatusNotifier.update(context, SettingsRepository(context).armed.first())
-        }
     }
 
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -139,22 +139,37 @@ fun SetupScreen(onDone: () -> Unit) {
             },
         )
         if (isSamsung) {
-            // Samsung's "sleeping apps" lists can't be read by apps, so this
-            // one is a pointer to the right screen rather than a checkmark.
+            // Samsung's "Unrestricted" battery setting and its sleeping-apps
+            // lists show up as battery-optimization exemption and the
+            // restricted standby bucket, so this one can be checked too.
             SetupItem(
                 icon = Icons.Rounded.Bedtime,
                 title = stringResource(R.string.setup_samsung_title),
                 body = stringResource(R.string.setup_samsung_body),
-                done = null,
-                onFix = {
-                    context.startActivity(
-                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
-                    )
-                },
+                done = readiness.ignoringBatteryOptimizations && readiness.backgroundUnrestricted,
+                onFix = { openAppDetails(context) },
+            )
+        } else if (!readiness.backgroundUnrestricted) {
+            SetupItem(
+                icon = Icons.Rounded.Bedtime,
+                title = stringResource(R.string.setup_background_title),
+                body = stringResource(R.string.setup_background_body),
+                done = false,
+                onFix = { openAppDetails(context) },
+            )
+        }
+        if (dndBypass) {
+            SetupItem(
+                icon = Icons.Rounded.DoNotDisturbOn,
+                title = stringResource(R.string.setup_dnd_title),
+                body = stringResource(R.string.setup_dnd_body),
+                done = readiness.dndAccessGranted,
+                onFix = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) },
             )
         }
 
-        if (readiness.allReady) {
+        val complete = readiness.allReady && (!dndBypass || readiness.dndAccessGranted)
+        if (complete) {
             Button(onClick = onDone, modifier = Modifier.fillMaxWidth().height(52.dp)) {
                 Text(stringResource(R.string.setup_done))
             }
@@ -196,4 +211,8 @@ private fun SetupItem(icon: ImageVector, title: String, body: String, done: Bool
             }
         }
     }
+}
+
+private fun openAppDetails(context: android.content.Context) {
+    context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
 }

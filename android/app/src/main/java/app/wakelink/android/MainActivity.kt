@@ -1,10 +1,13 @@
 package app.wakelink.android
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawing
@@ -13,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,12 +33,12 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import app.wakelink.android.contacts.ContactsScreen
 import app.wakelink.android.data.SettingsRepository
+import app.wakelink.android.data.ThemeMode
 import app.wakelink.android.data.TokenStore
 import app.wakelink.android.pairing.PairingScreen
 import app.wakelink.android.pairing.RegisterScreen
 import app.wakelink.android.pairing.parseInviteCode
 import app.wakelink.android.settings.SettingsScreen
-import app.wakelink.android.status.ArmedStatusNotifier
 import app.wakelink.android.status.DeviceReadiness
 import app.wakelink.android.status.SetupScreen
 import app.wakelink.android.ui.theme.WakeLinkTheme
@@ -54,6 +58,9 @@ class MainActivity : ComponentActivity() {
      */
     private var pendingInviteCode by mutableStateOf<String?>(null)
 
+    /** Opened from the "new version available" notification: show the update dialog right away. */
+    private var updateRequested by mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Edge-to-edge is forced at targetSdk 35 anyway; this also picks
         // status-bar icon colors that contrast with the light/dark background.
@@ -61,10 +68,26 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val startDestination = if (TokenStore(applicationContext).isRegistered) "contacts" else "register"
-        if (savedInstanceState == null) pendingInviteCode = parseInviteCode(intent?.dataString)
+        if (savedInstanceState == null) {
+            pendingInviteCode = parseInviteCode(intent?.dataString)
+            updateRequested = intent?.getBooleanExtra(EXTRA_SHOW_UPDATE, false) == true
+        }
 
         setContent {
-            WakeLinkTheme {
+            val themeMode by remember { SettingsRepository(applicationContext).themeMode }.collectAsState(initial = ThemeMode.SYSTEM)
+            val dark = when (themeMode) {
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+            }
+            // Status/navigation bar icons must contrast with the chosen theme,
+            // not just the system's.
+            LaunchedEffect(dark) {
+                val style = if (dark) SystemBarStyle.dark(Color.TRANSPARENT)
+                else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+                enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+            }
+            WakeLinkTheme(darkTheme = dark) {
                 // Background (not surface) color, so the status-bar strip
                 // above each screen matches the screen itself.
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -81,7 +104,9 @@ class MainActivity : ComponentActivity() {
                     LaunchedEffect(currentRoute) {
                         if (setupChecked || currentRoute != "contacts") return@LaunchedEffect
                         setupChecked = true
-                        if (!DeviceReadiness.check(this@MainActivity).allReady) navController.navigate("setup")
+                        val readiness = DeviceReadiness.check(this@MainActivity)
+                        val dndMissing = SettingsRepository(applicationContext).dndBypassEnabled.first() && !readiness.dndAccessGranted
+                        if (!readiness.allReady || dndMissing) navController.navigate("setup")
                     }
 
                     LaunchedEffect(pendingInviteCode, currentRoute) {
@@ -147,6 +172,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         parseInviteCode(intent.dataString)?.let { pendingInviteCode = it }
+        if (intent.getBooleanExtra(EXTRA_SHOW_UPDATE, false)) updateRequested = true
     }
 
     /**
@@ -160,10 +186,17 @@ class MainActivity : ComponentActivity() {
         var checked by rememberSaveable { mutableStateOf(false) }
         val settings = remember { SettingsRepository(applicationContext) }
         LaunchedEffect(Unit) {
-            if (checked || !settings.autoUpdateCheck.first()) return@LaunchedEffect
+            if (checked || updateRequested || !settings.autoUpdateCheck.first()) return@LaunchedEffect
             checked = true
             val found = runCatching { AppUpdater.checkForUpdate() }.getOrNull() ?: return@LaunchedEffect
             if (found.versionName != settings.skippedUpdateVersion.first()) update = found
+        }
+        // From the notification: the user asked for it, so ignore "skip".
+        LaunchedEffect(updateRequested) {
+            if (!updateRequested) return@LaunchedEffect
+            updateRequested = false
+            checked = true
+            runCatching { AppUpdater.checkForUpdate() }.getOrNull()?.let { update = it }
         }
         update?.let { info ->
             UpdateDialog(
@@ -175,6 +208,10 @@ class MainActivity : ComponentActivity() {
                 },
             )
         }
+    }
+
+    companion object {
+        const val EXTRA_SHOW_UPDATE = "show_update"
     }
 }
 

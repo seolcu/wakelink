@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.CallMade
 import androidx.compose.material.icons.automirrored.rounded.CallReceived
 import androidx.compose.material.icons.rounded.Alarm
+import androidx.compose.material.icons.rounded.AlarmOff
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Image
@@ -48,6 +49,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -132,6 +134,8 @@ fun ContactsScreen(onOpenPairing: () -> Unit, onOpenSettings: () -> Unit, onOpen
     var loadError by remember { mutableStateOf<String?>(null) }
     val warnings = remember { mutableStateListOf<String>() }
     var popupWarnings by remember { mutableStateOf<List<String>>(emptyList()) }
+    val settings = remember { SettingsRepository(context) }
+    val armed by settings.armed.collectAsState(initial = true)
 
     suspend fun reload() {
         loading = true
@@ -150,20 +154,20 @@ fun ContactsScreen(onOpenPairing: () -> Unit, onOpenSettings: () -> Unit, onOpen
     OnResume {
         scope.launch {
             val readiness = DeviceReadiness.check(context)
-            val armed = SettingsRepository(context).armed.first()
             warnings.clear()
-            if (!armed) warnings += context.getString(R.string.contacts_warning_disarmed)
             if (!readiness.notificationsEnabled) warnings += context.getString(R.string.contacts_warning_notifications)
             if (!readiness.fullScreenIntentAllowed) warnings += context.getString(R.string.contacts_warning_full_screen)
             if (!readiness.ignoringBatteryOptimizations) warnings += context.getString(R.string.contacts_warning_battery)
+            if (!readiness.backgroundUnrestricted) warnings += context.getString(R.string.contacts_warning_background)
+            if (SettingsRepository(context).dndBypassEnabled.first() && !readiness.dndAccessGranted) {
+                warnings += context.getString(R.string.contacts_warning_dnd)
+            }
             // A banner is easy to scroll past, so a newly appearing problem
             // also gets a dialog -- once per distinct problem per launch.
-            // (Being switched off is the user's own choice: banner only.)
-            val problems = warnings.drop(if (armed) 0 else 1)
-            val fresh = problems.filterNot { it in warningsAlreadyShown }
+            val fresh = warnings.filterNot { it in warningsAlreadyShown }
             if (fresh.isNotEmpty()) {
                 warningsAlreadyShown += fresh
-                popupWarnings = problems
+                popupWarnings = warnings.toList()
             }
         }
     }
@@ -226,6 +230,11 @@ fun ContactsScreen(onOpenPairing: () -> Unit, onOpenSettings: () -> Unit, onOpen
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxSize(),
             ) {
+                // Whether contacts can wake this phone is always visible here
+                // (it used to be an always-on notification).
+                item(key = "armed") {
+                    ArmedCard(armed) { value -> scope.launch { settings.setArmed(value) } }
+                }
                 if (warnings.isNotEmpty()) {
                     item(key = "warnings") { WarningsBanner(warnings, onOpenSettings) }
                 }
@@ -249,6 +258,37 @@ fun ContactsScreen(onOpenPairing: () -> Unit, onOpenSettings: () -> Unit, onOpen
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ArmedCard(armed: Boolean, onChange: (Boolean) -> Unit) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = if (armed) WakeTheme.status.successContainer else MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = if (armed) WakeTheme.status.onSuccessContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+        ),
+        shape = MaterialTheme.shapes.large,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+        ) {
+            Icon(if (armed) Icons.Rounded.Alarm else Icons.Rounded.AlarmOff, contentDescription = null)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    stringResource(if (armed) R.string.contacts_armed_on else R.string.contacts_armed_off),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    stringResource(if (armed) R.string.settings_armed_on else R.string.settings_armed_off),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Switch(checked = armed, onCheckedChange = onChange)
         }
     }
 }

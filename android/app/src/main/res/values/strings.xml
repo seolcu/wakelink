@@ -2,9 +2,6 @@
 <resources>
     <!-- Default (English). Korean lives in values-ko/; keep both in sync. -->
     <string name="app_name" translatable="false">WakeLink</string>
-    <string name="armed_notification_channel_name">Standby status</string>
-    <string name="armed_notification_title_on">WakeLink is on standby</string>
-    <string name="armed_notification_title_off">WakeLink is turned off</string>
     <string name="alarm_notification_channel_name">Wake alarms</string>
     <string name="alarm_notification_title">%1$s is waking you up</string>
     <string name="alarm_stop_action">Stop</string>
@@ -42,7 +39,6 @@
     <string name="register_start">Get started</string>
     <string name="register_failed">Registration failed: %1$s</string>
     <string name="contacts_load_failed">Couldn\'t load your contacts: %1$s</string>
-    <string name="contacts_warning_disarmed">WakeLink is turned off, so nobody can wake you</string>
     <string name="contacts_warning_notifications">Notifications are off, so wake alarms may not show properly</string>
     <string name="contacts_warning_full_screen">Without the full-screen alert permission, the alarm can\'t appear on your lock screen</string>
     <string name="contacts_warning_tap">Tap to open settings</string>
@@ -141,8 +137,8 @@
     <string name="settings_update_available">Version %1$s is available</string>
     <string name="settings_update_check_failed">Couldn\'t check: %1$s</string>
     <string name="settings_network_error">Network error</string>
-    <string name="settings_auto_update">Check when the app opens</string>
-    <string name="settings_auto_update_hint">Tells you about new versions. Nothing installs without your confirmation</string>
+    <string name="settings_auto_update">Check for new versions</string>
+    <string name="settings_auto_update_hint">Checks when the app opens and twice a day, and notifies you. Nothing installs without your confirmation</string>
     <string name="settings_rename_title">Change name</string>
     <string name="settings_save">Save</string>
     <string name="settings_rotate_title">Reissue your API key?</string>
@@ -213,7 +209,7 @@
     <string name="setup_full_screen_body">Shows the alarm screen on a locked phone</string>
     <string name="setup_battery_body">Lets wake-ups arrive instantly while your phone sleeps</string>
     <string name="setup_samsung_title">Samsung: don\'t put WakeLink to sleep</string>
-    <string name="setup_samsung_body">In App info → Battery, choose \"Unrestricted\". Also make sure WakeLink isn\'t in Battery → Background usage limits → Sleeping apps.</string>
+    <string name="setup_samsung_body">In App info → Battery, choose \"Unrestricted\", and keep WakeLink out of Battery → Background usage limits → Sleeping apps. This turns into a check once both are set.</string>
     <string name="setup_done">All set</string>
     <string name="setup_later">Later</string>
     <string name="setup_fix">Turn on</string>
@@ -237,4 +233,20 @@
     <string name="settings_show_images">Show pictures others send</string>
     <string name="settings_show_images_hint">Pictures attached to a wake-up appear on the alarm screen</string>
     <string name="media_unusable">%1$s (not available on this phone)</string>
+    <string name="contacts_warning_background">WakeLink is restricted from running in the background, so wake-ups may not arrive</string>
+    <string name="contacts_warning_dnd">\"Ring through Total silence\" is on, but Do Not Disturb access isn\'t allowed</string>
+    <string name="contacts_armed_on">Receiving wake-ups</string>
+    <string name="contacts_armed_off">Not receiving wake-ups</string>
+    <string name="setup_background_title">Allow background activity</string>
+    <string name="setup_background_body">In App info → Battery, choose \"Unrestricted\" so wake-ups can start the alarm</string>
+    <string name="setup_dnd_title">Do Not Disturb access</string>
+    <string name="setup_dnd_body">Needed for \"Ring through Total silence\", which you turned on</string>
+    <string name="settings_display">Display</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_system">Follow the system</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="update_channel_name">App updates</string>
+    <string name="update_notification_title">WakeLink %1$s is available</string>
+    <string name="update_notification_body">Tap to update</string>
 </resources>

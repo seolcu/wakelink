@@ -29,8 +29,8 @@ android {
         // Bump both for every release: versionName becomes the GitHub
         // release tag (v<versionName>) the in-app updater compares against,
         // and Android refuses to install a lower versionCode over a higher one.
-        versionCode = 6
-        versionName = "0.3.0"
+        versionCode = 7
+        versionName = "0.3.1"
 
         // Overridable at build time for self-hosted forks; the official
         // Play Store build ships with the maintainer's default instance.
