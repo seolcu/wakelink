@@ -145,9 +145,13 @@ type pairingView struct {
 	// OtherPublicKey is the contact's device key for sealing wakes end to
 	// end; null if their app is too old to have one.
 	OtherPublicKey *string `json:"other_public_key"`
-	// TheyAcceptWakes is false while the contact has switched off
-	// receiving wake-ups in their app (independent of permissions).
+	// TheyAcceptWakes is false while the contact isn't taking wakes from
+	// this user: either receiving is switched off entirely, or they turned
+	// off this contact. Deliberately one flag, so the sender can't tell
+	// "paused for everyone" from "paused for me".
 	TheyAcceptWakes bool `json:"they_accept_wakes"`
+	// IAcceptFromThem is this user's own per-contact switch.
+	IAcceptFromThem bool `json:"i_accept_from_them"`
 }
 
 func (s *Server) handleListPairings(w http.ResponseWriter, r *http.Request) {
@@ -176,7 +180,13 @@ func (s *Server) handleListPairings(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			continue
 		}
-		view := pairingView{ID: p.ID, OtherUserName: other.DisplayName, CreatedAt: p.CreatedAt, TheyAcceptWakes: other.AcceptingWakes}
+		view := pairingView{
+			ID:              p.ID,
+			OtherUserName:   other.DisplayName,
+			CreatedAt:       p.CreatedAt,
+			TheyAcceptWakes: other.AcceptingWakes && p.Accepts(user.ID, other.ID),
+			IAcceptFromThem: p.Accepts(other.ID, user.ID),
+		}
 		if other.PublicKey.Valid {
 			view.OtherPublicKey = &other.PublicKey.String
 		}
@@ -199,6 +209,9 @@ type patchPairingRequest struct {
 	// permission to wake someone, or a permission they've been granted
 	// can't be re-granted by anyone but the grantor.
 	ICanWakeThem *bool `json:"i_can_wake_them"`
+	// IAcceptFromThem sets whether the requesting user accepts wakes from
+	// the other side -- the receiver's own per-contact consent.
+	IAcceptFromThem *bool `json:"i_accept_from_them"`
 }
 
 func (s *Server) handlePatchPairing(w http.ResponseWriter, r *http.Request) {
@@ -210,13 +223,20 @@ func (s *Server) handlePatchPairing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req patchPairingRequest
-	if err := readJSON(w, r, &req); err != nil || req.ICanWakeThem == nil {
-		writeError(w, http.StatusBadRequest, "i_can_wake_them is required")
+	if err := readJSON(w, r, &req); err != nil || (req.ICanWakeThem == nil && req.IAcceptFromThem == nil) {
+		writeError(w, http.StatusBadRequest, "i_can_wake_them or i_accept_from_them is required")
 		return
 	}
 
-	if err := s.DB.SetPermission(r.Context(), pairingID, user.ID, *req.ICanWakeThem); err != nil {
-		if err == db.ErrNotFound {
+	var err2 error
+	if req.ICanWakeThem != nil {
+		err2 = s.DB.SetPermission(r.Context(), pairingID, user.ID, *req.ICanWakeThem)
+	}
+	if err2 == nil && req.IAcceptFromThem != nil {
+		err2 = s.DB.SetAcceptsFrom(r.Context(), pairingID, user.ID, *req.IAcceptFromThem)
+	}
+	if err2 != nil {
+		if err2 == db.ErrNotFound {
 			writeError(w, http.StatusNotFound, "pairing not found")
 			return
 		}

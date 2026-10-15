@@ -32,7 +32,7 @@ func (d *DB) CreatePairing(ctx context.Context, userID1, userID2 int64) (*Pairin
 
 func (d *DB) GetPairing(ctx context.Context, id int64) (*Pairing, error) {
 	row := d.QueryRowContext(ctx,
-		`SELECT id, user_a_id, user_b_id, a_can_wake_b, b_can_wake_a, created_at FROM pairings WHERE id = ?`,
+		`SELECT id, user_a_id, user_b_id, a_can_wake_b, b_can_wake_a, created_at, a_accepts_from_b, b_accepts_from_a FROM pairings WHERE id = ?`,
 		id,
 	)
 	return scanPairing(row)
@@ -44,7 +44,7 @@ func (d *DB) GetPairingBetween(ctx context.Context, userID1, userID2 int64) (*Pa
 		a, b = b, a
 	}
 	row := d.QueryRowContext(ctx,
-		`SELECT id, user_a_id, user_b_id, a_can_wake_b, b_can_wake_a, created_at FROM pairings WHERE user_a_id = ? AND user_b_id = ?`,
+		`SELECT id, user_a_id, user_b_id, a_can_wake_b, b_can_wake_a, created_at, a_accepts_from_b, b_accepts_from_a FROM pairings WHERE user_a_id = ? AND user_b_id = ?`,
 		a, b,
 	)
 	return scanPairing(row)
@@ -52,8 +52,8 @@ func (d *DB) GetPairingBetween(ctx context.Context, userID1, userID2 int64) (*Pa
 
 func scanPairing(row *sql.Row) (*Pairing, error) {
 	var p Pairing
-	var aCanWakeB, bCanWakeA int
-	if err := row.Scan(&p.ID, &p.UserAID, &p.UserBID, &aCanWakeB, &bCanWakeA, &p.CreatedAt); err != nil {
+	var aCanWakeB, bCanWakeA, aAccepts, bAccepts int
+	if err := row.Scan(&p.ID, &p.UserAID, &p.UserBID, &aCanWakeB, &bCanWakeA, &p.CreatedAt, &aAccepts, &bAccepts); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -61,12 +61,14 @@ func scanPairing(row *sql.Row) (*Pairing, error) {
 	}
 	p.ACanWakeB = aCanWakeB != 0
 	p.BCanWakeA = bCanWakeA != 0
+	p.AAcceptsFromB = aAccepts != 0
+	p.BAcceptsFromA = bAccepts != 0
 	return &p, nil
 }
 
 func (d *DB) ListPairingsForUser(ctx context.Context, userID int64, limit int) ([]Pairing, error) {
 	rows, err := d.QueryContext(ctx,
-		`SELECT id, user_a_id, user_b_id, a_can_wake_b, b_can_wake_a, created_at FROM pairings
+		`SELECT id, user_a_id, user_b_id, a_can_wake_b, b_can_wake_a, created_at, a_accepts_from_b, b_accepts_from_a FROM pairings
 		 WHERE user_a_id = ? OR user_b_id = ? ORDER BY created_at DESC LIMIT ?`,
 		userID, userID, limit,
 	)
@@ -78,12 +80,14 @@ func (d *DB) ListPairingsForUser(ctx context.Context, userID int64, limit int) (
 	var out []Pairing
 	for rows.Next() {
 		var p Pairing
-		var aCanWakeB, bCanWakeA int
-		if err := rows.Scan(&p.ID, &p.UserAID, &p.UserBID, &aCanWakeB, &bCanWakeA, &p.CreatedAt); err != nil {
+		var aCanWakeB, bCanWakeA, aAccepts, bAccepts int
+		if err := rows.Scan(&p.ID, &p.UserAID, &p.UserBID, &aCanWakeB, &bCanWakeA, &p.CreatedAt, &aAccepts, &bAccepts); err != nil {
 			return nil, err
 		}
 		p.ACanWakeB = aCanWakeB != 0
 		p.BCanWakeA = bCanWakeA != 0
+		p.AAcceptsFromB = aAccepts != 0
+		p.BAcceptsFromA = bAccepts != 0
 		out = append(out, p)
 	}
 	return out, rows.Err()
@@ -106,6 +110,25 @@ func (d *DB) SetPermission(ctx context.Context, pairingID, requestingUserID int6
 		_, err = d.ExecContext(ctx, `UPDATE pairings SET a_can_wake_b = ? WHERE id = ?`, val, pairingID)
 	case p.UserBID:
 		_, err = d.ExecContext(ctx, `UPDATE pairings SET b_can_wake_a = ? WHERE id = ?`, val, pairingID)
+	default:
+		return ErrNotFound
+	}
+	return err
+}
+
+// SetAcceptsFrom updates whether requestingUserID accepts wakes from the
+// other side of this pairing -- the one switch the *receiving* member
+// controls. requestingUserID must be a member of the pairing.
+func (d *DB) SetAcceptsFrom(ctx context.Context, pairingID, requestingUserID int64, accepts bool) error {
+	p, err := d.GetPairing(ctx, pairingID)
+	if err != nil {
+		return err
+	}
+	switch requestingUserID {
+	case p.UserAID:
+		_, err = d.ExecContext(ctx, `UPDATE pairings SET a_accepts_from_b = ? WHERE id = ?`, accepts, pairingID)
+	case p.UserBID:
+		_, err = d.ExecContext(ctx, `UPDATE pairings SET b_accepts_from_a = ? WHERE id = ?`, accepts, pairingID)
 	default:
 		return ErrNotFound
 	}

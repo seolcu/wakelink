@@ -28,6 +28,10 @@ type Pairing struct {
 	ACanWakeB bool
 	BCanWakeA bool
 	CreatedAt int64
+	// AAcceptsFromB is a's own choice to receive wakes from b (and vice
+	// versa) -- the receiving side's consent, independent of CanWake.
+	AAcceptsFromB bool
+	BAcceptsFromA bool
 }
 
 // CanWake reports whether fromUserID currently has permission to wake
@@ -39,6 +43,19 @@ func (p *Pairing) CanWake(fromUserID, toUserID int64) bool {
 	}
 	if p.UserBID == fromUserID && p.UserAID == toUserID {
 		return p.BCanWakeA
+	}
+	return false
+}
+
+// Accepts reports whether toUserID currently accepts wakes from
+// fromUserID under this pairing (the receiver's per-contact switch).
+// False for ids that aren't the two members.
+func (p *Pairing) Accepts(fromUserID, toUserID int64) bool {
+	if p.UserBID == fromUserID && p.UserAID == toUserID {
+		return p.AAcceptsFromB
+	}
+	if p.UserAID == fromUserID && p.UserBID == toUserID {
+		return p.BAcceptsFromA
 	}
 	return false
 }

@@ -50,11 +50,11 @@ Notes:
   or any data beyond: display name, whether they can currently wake you,
   and the timestamps of past triggers.
 - Separately from per-pairing permissions, each person has a "receiving
-  wake-ups" switch. While it's off, contacts see that, the wake button is
-  disabled, and the server refuses wakes (409) instead of sending them.
-- Separately from per-pairing permissions, each person has a "receiving
-  wake-ups" switch. While it's off, contacts see that, the wake button is
-  disabled, and the server refuses wakes (409) instead of sending them.
+  wake-ups" switch, and per contact a "receive wake-ups from them" switch
+  (the receiver's own consent; the sender can't change it). While either
+  is off, the sender sees the same neutral "not receiving right now" --
+  they can't tell which -- the wake button is disabled, and the server
+  refuses wakes (409) instead of sending them.
 - A wake can carry a sound and a picture the sender picked (built-in
   sounds, a short voice recording, an audio file, a photo or GIF). The
   receiver decides what to honor: "sounds chosen by others" can be limited

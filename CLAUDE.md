@@ -248,20 +248,17 @@ shown, with a switch, at the top of `ContactsScreen` instead.
 That "receiving wake-ups" switch (`armed`) is stored on the phone (the
 alarm path reads it, even before unlock) **and** mirrored to the server via
 `ArmedSync` (`PUT /v1/me/accepting`, re-sent on every unlocked start).
-Contacts see it as `they_accept_wakes`, and `handleTrigger` refuses wakes
-with 409 while it's off -- otherwise a wake would be dropped on the
-receiver while the sender waits for an ack. Always change it through
-`ArmedSync.set`, which also silences a wake that's ringing at the time.
-Self-test alarms (trigger id < 0) ignore the switch.
+Always change it through `ArmedSync.set`, which also silences a wake that's
+ringing at the time. Self-test alarms (trigger id < 0) ignore the switch.
 
-That "receiving wake-ups" switch (`armed`) is stored on the phone (the
-alarm path reads it, even before unlock) **and** mirrored to the server via
-`ArmedSync` (`PUT /v1/me/accepting`, re-sent on every unlocked start).
-Contacts see it as `they_accept_wakes`, and `handleTrigger` refuses wakes
-with 409 while it's off -- otherwise a wake would be dropped on the
-receiver while the sender waits for an ack. Always change it through
-`ArmedSync.set`, which also silences a wake that's ringing at the time.
-Self-test alarms (trigger id < 0) ignore the switch.
+Each pairing also has the receiver's per-contact consent
+(`a_accepts_from_b` / `b_accepts_from_a`, set via `PATCH
+/v1/pairings/{id}` `i_accept_from_them` by the person being woken, checked
+with `Pairing.Accepts()`), distinct from the waker's `CanWake` permission.
+Contacts see both switches folded into one `they_accept_wakes` flag (so a
+sender can't tell "paused for everyone" from "blocked just me"), and
+`handleTrigger` refuses wakes with 409 while either is off -- otherwise a
+wake would be dropped on the receiver while the sender waits for an ack.
 
 `status/SetupScreen.kt` is the "get ready" checklist (notifications,
 full-screen alarms, battery optimization, background restriction / Samsung

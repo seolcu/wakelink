@@ -731,3 +731,41 @@ func TestWakesRefusedWhileRecipientIsNotAccepting(t *testing.T) {
 		t.Fatalf("after switching back on: status %d", rec.Code)
 	}
 }
+
+func TestReceiverCanRefuseOneContact(t *testing.T) {
+	s, sender := newTestServer(t)
+	s.RateLimit.Cooldown = 0
+	router := s.Router()
+	alice, bob, pairingID := pairUp(t, router)
+
+	// Alice stops accepting wakes from Bob (her side, not his permission).
+	if rec := doJSON(t, router, http.MethodPatch, pairingPath(pairingID), alice.APIKey, map[string]bool{"i_accept_from_them": false}); rec.Code != http.StatusOK {
+		t.Fatalf("patch: status %d body %s", rec.Code, rec.Body.String())
+	}
+	if got := listPairings(t, router, alice.APIKey)[0]; got.IAcceptFromThem || !got.TheyAcceptWakes || !got.ICanWakeThem {
+		t.Fatalf("Alice's own view should only change her inbound switch: %+v", got)
+	}
+	if got := listPairings(t, router, bob.APIKey)[0]; got.TheyAcceptWakes || !got.ICanWakeThem {
+		t.Fatalf("Bob should see Alice not accepting, while keeping his permission: %+v", got)
+	}
+	if rec := doJSON(t, router, http.MethodPost, pairingPath(pairingID)+"/trigger", bob.APIKey, nil); rec.Code != http.StatusConflict || len(sender.messages) != 0 {
+		t.Fatalf("Bob's wake: expected 409 and no push, got %d", rec.Code)
+	}
+	// Alice can still wake Bob.
+	if rec := doJSON(t, router, http.MethodPost, pairingPath(pairingID)+"/trigger", alice.APIKey, nil); rec.Code != http.StatusCreated {
+		t.Fatalf("Alice's wake: status %d", rec.Code)
+	}
+	// Bob can't flip Alice's switch: his i_accept_from_them is about Alice's wakes to him.
+	doJSON(t, router, http.MethodPatch, pairingPath(pairingID), bob.APIKey, map[string]bool{"i_accept_from_them": true})
+	if rec := doJSON(t, router, http.MethodPost, pairingPath(pairingID)+"/trigger", bob.APIKey, nil); rec.Code != http.StatusConflict {
+		t.Fatalf("Bob must not be able to undo Alice's choice, got %d", rec.Code)
+	}
+
+	doJSON(t, router, http.MethodPatch, pairingPath(pairingID), alice.APIKey, map[string]bool{"i_accept_from_them": true})
+	if rec := doJSON(t, router, http.MethodPost, pairingPath(pairingID)+"/trigger", bob.APIKey, nil); rec.Code != http.StatusCreated {
+		t.Fatalf("after Alice re-accepts: status %d", rec.Code)
+	}
+	if rec := doJSON(t, router, http.MethodPatch, pairingPath(pairingID), alice.APIKey, map[string]any{}); rec.Code != http.StatusBadRequest {
+		t.Fatalf("empty patch: expected 400, got %d", rec.Code)
+	}
+}
