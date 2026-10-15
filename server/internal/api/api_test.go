@@ -671,3 +671,34 @@ func TestDownloadRedirect(t *testing.T) {
 		t.Fatalf("expected 302 to %s, got %d Location=%q", s.DownloadURL, rec.Code, rec.Header().Get("Location"))
 	}
 }
+
+func TestRegisterIsThrottledPerIP(t *testing.T) {
+	s, _ := newTestServer(t)
+	s.RegisterLimit = ratelimit.NewWindow(2, time.Hour)
+	router := s.Router()
+
+	for i := 0; i < 2; i++ {
+		register(t, router, fmt.Sprintf("User%d", i), "")
+	}
+	if rec := doJSON(t, router, http.MethodPost, "/v1/register", "", registerRequest{DisplayName: "One too many"}); rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected 429, got %d", rec.Code)
+	}
+
+	// Spoofable headers don't buy a fresh allowance...
+	req := httptest.NewRequest(http.MethodPost, "/v1/register", strings.NewReader(`{"display_name":"Sneaky"}`))
+	req.Header.Set("X-Real-IP", "203.0.113.9")
+	req.Header.Set("True-Client-IP", "203.0.113.9")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("spoofed X-Real-IP: expected 429, got %d", rec.Code)
+	}
+	// ...while the proxy-set X-Forwarded-For identifies a different client.
+	req = httptest.NewRequest(http.MethodPost, "/v1/register", strings.NewReader(`{"display_name":"Elsewhere"}`))
+	req.Header.Set("X-Forwarded-For", "198.51.100.7")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("different client: expected 201, got %d", rec.Code)
+	}
+}

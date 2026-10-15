@@ -24,6 +24,8 @@ type Server struct {
 	// DownloadURL is where GET /download redirects (the latest APK); empty
 	// disables the route.
 	DownloadURL string
+	// RegisterLimit throttles account creation per client IP; nil = unlimited.
+	RegisterLimit *ratelimit.Window
 	// Site serves the public web pages (landing, invite links,
 	// assetlinks.json); nil leaves them out.
 	Site *web.Site

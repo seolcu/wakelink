@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"net"
 	"net/http"
 	"strings"
 	"unicode/utf8"
@@ -38,10 +39,14 @@ type registerResponse struct {
 }
 
 // handleRegister creates a new WakeLink identity for a fresh app install.
-// It is deliberately unauthenticated (there's no credential yet) --
-// callers should rate-limit this at the reverse proxy / infra layer if
-// abuse becomes a concern at public-instance scale.
+// It is necessarily unauthenticated (there's no credential yet), so it is
+// throttled per client IP (RegisterLimit) to keep anyone from minting
+// accounts in bulk.
 func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
+	if !s.RegisterLimit.Allow(clientIP(r)) {
+		writeError(w, http.StatusTooManyRequests, "too many registrations, try again later")
+		return
+	}
 	var req registerRequest
 	if err := readJSON(w, r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -73,4 +78,30 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusCreated, registerResponse{UserID: user.ID, APIKey: rawKey})
+}
+
+// clientIP is the caller's address, as set by forwardedFor.
+func clientIP(r *http.Request) string {
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		return host
+	}
+	return r.RemoteAddr
+}
+
+// forwardedFor replaces RemoteAddr with the client address the reverse
+// proxy reports. Caddy (with no trusted proxies configured) overwrites
+// X-Forwarded-For with the real client IP, so its first entry is
+// authoritative. Headers a client can set freely, like X-Real-IP or
+// True-Client-IP -- which chi's RealIP middleware would prefer -- are
+// deliberately ignored, or anyone could dodge per-IP limits.
+func forwardedFor(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			first, _, _ := strings.Cut(xff, ",")
+			if ip := net.ParseIP(strings.TrimSpace(first)); ip != nil {
+				r.RemoteAddr = net.JoinHostPort(ip.String(), "0")
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }

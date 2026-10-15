@@ -46,6 +46,10 @@ func main() {
 	if inviteTTLSec < 1 {
 		log.Fatalf("INVITE_TTL_SECONDS must be >= 1, got %d", inviteTTLSec)
 	}
+	registerPerHour, err := getenvInt("REGISTER_LIMIT_PER_HOUR", 10)
+	if err != nil {
+		log.Fatal(err)
+	}
 	fcmServiceAccountPath := os.Getenv("FCM_SERVICE_ACCOUNT_PATH")
 	fcmMock := os.Getenv("FCM_MOCK") == "true"
 	downloadURL := getenv("APK_DOWNLOAD_URL", "https://github.com/seolcu/wakelink/releases/latest/download/wakelink.apk")
@@ -100,12 +104,13 @@ func main() {
 			Cooldown: time.Duration(cooldownSec) * time.Second,
 			DailyCap: dailyCap,
 		},
-		InviteTTL:   time.Duration(inviteTTLSec) * time.Second,
-		Metrics:     &metrics.Counters{},
-		Version:     "dev",
-		StartedAt:   time.Now(),
-		DownloadURL: downloadURL,
-		Site:        site,
+		InviteTTL:     time.Duration(inviteTTLSec) * time.Second,
+		RegisterLimit: ratelimit.NewWindow(registerPerHour, time.Hour),
+		Metrics:       &metrics.Counters{},
+		Version:       "dev",
+		StartedAt:     time.Now(),
+		DownloadURL:   downloadURL,
+		Site:          site,
 	}
 
 	httpServer := &http.Server{
