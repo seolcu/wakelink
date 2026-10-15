@@ -407,11 +407,12 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
     val scope = rememberCoroutineScope()
     val settings = remember { SettingsRepository(context) }
     // The sound this user sends to this contact; null lets the receiver's own sound play.
-    val soundKey by settings.soundForPairing(pairing.id).collectAsState(initial = null)
+    // For the next wake only, like the picture and message; uploads stay in the picker.
+    var soundKey by rememberSaveable(pairing.id) { mutableStateOf<String?>(null) }
     // The picture for the next wake only (like the message); null = none.
     // Uploaded pictures stay in the picker for quick reuse.
     var imageKey by rememberSaveable(pairing.id) { mutableStateOf<String?>(null) }
-    LaunchedEffect(pairing.id) { settings.forgetLegacyImageForPairing(pairing.id) }
+    LaunchedEffect(pairing.id) { settings.forgetLegacyPicksForPairing(pairing.id) }
     var pickingImage by remember { mutableStateOf(false) }
     // A note for the next wake only; cleared once it has been sent.
     var message by rememberSaveable(pairing.id) { mutableStateOf("") }
@@ -424,7 +425,7 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
         val ref = parseSoundRef(soundKey) as? SoundRef.Custom ?: return@LaunchedEffect
         val list = runCatching { api.listSounds() }.getOrNull() ?: return@LaunchedEffect
         mySounds = list
-        if (list.none { it.id == ref.id }) settings.setSoundForPairing(pairing.id, null)
+        if (list.none { it.id == ref.id }) soundKey = null
     }
     LaunchedEffect(imageKey) {
         val ref = parseSoundRef(imageKey) as? SoundRef.Custom ?: return@LaunchedEffect
@@ -554,6 +555,7 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
                             }
                             message = ""
                             imageKey = null
+                            soundKey = null
                             // Sent is not rang: keep the user waiting on the
                             // receiver's ack before claiming success.
                             wakeStatus = WakeStatus(StatusKind.PROGRESS, context.getString(R.string.contacts_checking, pairing.otherUserName))
@@ -682,7 +684,7 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
         SoundPickerSheet(
             title = stringResource(R.string.contacts_sound_title, pairing.otherUserName),
             selected = soundKey,
-            onSelect = { key -> scope.launch { settings.setSoundForPairing(pairing.id, key) } },
+            onSelect = { key -> soundKey = key },
             onDismiss = {
                 pickingSound = false
                 scope.launch { mySounds = runCatching { api.listSounds() }.getOrNull() }

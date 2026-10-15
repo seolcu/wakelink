@@ -163,7 +163,7 @@
     <string name="update_later">Later</string>
     <string name="contacts_warning_battery">Battery optimization may delay wake-ups while your phone sleeps</string>
     <string name="contacts_sound">Sound: %1$s</string>
-    <string name="contacts_sound_title">Sound for waking %1$s</string>
+    <string name="contacts_sound_title">Sound for your next wake-up to %1$s</string>
     <string name="sound_preset_beep">Classic beep</string>
     <string name="sound_preset_digital">Digital</string>
     <string name="sound_preset_chime">Chime</string>

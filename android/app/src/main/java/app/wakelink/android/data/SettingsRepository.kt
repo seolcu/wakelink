@@ -134,20 +134,13 @@ class SettingsRepository(context: Context) {
     suspend fun setAutoUpdateCheck(value: Boolean) = edit { putBoolean(Keys.AUTO_UPDATE_CHECK, value) }
     suspend fun setSkippedUpdateVersion(value: String) = edit { putString(Keys.SKIPPED_UPDATE_VERSION, value) }
 
-    /** The sound this user last picked for waking the contact in [pairingId] (sender side). */
-    fun soundForPairing(pairingId: Long): Flow<String?> =
-        observe { it.getString(Keys.SOUND_FOR_PAIRING_PREFIX + pairingId, null) }
-
-    suspend fun setSoundForPairing(pairingId: Long, key: String?) = edit {
-        if (key == null) remove(Keys.SOUND_FOR_PAIRING_PREFIX + pairingId)
-        else putString(Keys.SOUND_FOR_PAIRING_PREFIX + pairingId, key)
-    }
-
     /**
-     * Before 0.4.1 a picked picture stayed attached to every wake of
-     * [pairingId]; now it goes with one wake only, so drop that old choice.
+     * Before 0.4.1 (pictures) and 0.4.2 (sounds) a pick stayed attached to
+     * every wake of [pairingId]; now it goes with one wake only, so drop
+     * those old saved choices.
      */
-    suspend fun forgetLegacyImageForPairing(pairingId: Long) = edit {
+    suspend fun forgetLegacyPicksForPairing(pairingId: Long) = edit {
+        remove(Keys.SOUND_FOR_PAIRING_PREFIX + pairingId)
         remove(Keys.IMAGE_FOR_PAIRING_PREFIX + pairingId)
     }
 
