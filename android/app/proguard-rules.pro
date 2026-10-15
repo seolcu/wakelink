@@ -18,3 +18,6 @@
 # crashed before any app code ran ("NoSuchMethodException:
 # WorkDatabase_Impl.<init>"). Keep generated Room database constructors.
 -keep class * extends androidx.room.RoomDatabase { <init>(); }
+
+# End-to-end payload, also (de)serialized by Moshi's reflective adapter.
+-keep class app.wakelink.android.crypto.SealedWake { *; }

@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,16 +16,20 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.BatteryAlert
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.DoNotDisturbOn
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Key
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.PhoneLocked
 import androidx.compose.material.icons.rounded.PowerSettingsNew
+import androidx.compose.material.icons.rounded.RecordVoiceOver
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.Update
 import androidx.compose.material.icons.rounded.TouchApp
@@ -37,7 +42,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -46,6 +53,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -62,12 +70,18 @@ import app.wakelink.android.R
 import app.wakelink.android.alarm.AlarmForegroundService
 import app.wakelink.android.data.DismissMode
 import app.wakelink.android.data.SettingsRepository
+import app.wakelink.android.data.SoundPolicy
 import app.wakelink.android.data.TokenStore
 import app.wakelink.android.network.ApiClient
 import app.wakelink.android.network.PatchMeRequest
 import app.wakelink.android.network.orThrow
 import app.wakelink.android.network.toUserMessage
 import app.wakelink.android.pairing.MAX_DISPLAY_NAME_LENGTH
+import app.wakelink.android.sounds.SoundPickerSheet
+import app.wakelink.android.sounds.SoundPreview
+import app.wakelink.android.sounds.SoundRef
+import app.wakelink.android.sounds.parseSoundRef
+import app.wakelink.android.sounds.soundLabel
 import app.wakelink.android.status.ArmedStatusNotifier
 import app.wakelink.android.status.DeviceReadiness
 import app.wakelink.android.ui.OnResume
@@ -80,6 +94,7 @@ import app.wakelink.android.ui.theme.WakeTheme
 import app.wakelink.android.update.AppUpdater
 import app.wakelink.android.update.UpdateDialog
 import app.wakelink.android.update.UpdateInfo
+import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -95,7 +110,13 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
     var armed by remember { mutableStateOf(true) }
     var dndBypass by remember { mutableStateOf(false) }
     var dismissMode by remember { mutableStateOf(DismissMode.UNLOCK_REQUIRED) }
-    var maxVolume by remember { mutableStateOf(false) }
+    var volumePercent by remember { mutableIntStateOf(SettingsRepository.DEFAULT_VOLUME_PERCENT) }
+    var crescendo by remember { mutableStateOf(false) }
+    var defaultSound by remember { mutableStateOf(SettingsRepository.DEFAULT_SOUND_KEY) }
+    var soundPolicy by remember { mutableStateOf(SoundPolicy.ALLOW_ALL) }
+    var showImages by remember { mutableStateOf(true) }
+    var pickingDefaultSound by remember { mutableStateOf(false) }
+    var pickingPolicy by remember { mutableStateOf(false) }
     var dndAccessGranted by remember { mutableStateOf(false) }
     var readiness by remember { mutableStateOf<DeviceReadiness?>(null) }
 
@@ -115,7 +136,11 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
         armed = settings.armed.first()
         dndBypass = settings.dndBypassEnabled.first()
         dismissMode = settings.dismissMode.first()
-        maxVolume = settings.maxVolumeOnRing.first()
+        volumePercent = settings.volumePercent.first()
+        crescendo = settings.crescendo.first()
+        defaultSound = settings.defaultSound.first()
+        soundPolicy = settings.soundPolicy.first()
+        showImages = settings.showImages.first()
         autoUpdateCheck = settings.autoUpdateCheck.first()
         try {
             myName = api.getMe().displayName
@@ -237,12 +262,52 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                 )
                 SettingsRow(
                     icon = Icons.AutoMirrored.Rounded.VolumeUp,
-                    title = stringResource(R.string.settings_max_volume),
-                    supporting = stringResource(R.string.settings_max_volume_hint),
+                    title = stringResource(R.string.settings_volume, volumePercent),
+                    supporting = stringResource(R.string.settings_volume_hint),
+                )
+                Slider(
+                    value = volumePercent.toFloat(),
+                    onValueChange = { volumePercent = it.roundToInt() },
+                    onValueChangeFinished = {
+                        scope.launch { settings.setVolumePercent(volumePercent) }
+                        SoundPreview.play(context, parseSoundRef(defaultSound) ?: SoundRef.Device, volumePercent)
+                    },
+                    valueRange = SettingsRepository.MIN_VOLUME_PERCENT.toFloat()..100f,
+                    steps = (100 - SettingsRepository.MIN_VOLUME_PERCENT) / 10 - 1,
+                    modifier = Modifier.padding(horizontal = 24.dp),
+                )
+                SettingsRow(
+                    icon = Icons.AutoMirrored.Rounded.TrendingUp,
+                    title = stringResource(R.string.settings_crescendo),
+                    supporting = stringResource(R.string.settings_crescendo_hint),
                     trailing = {
-                        Switch(checked = maxVolume, onCheckedChange = { value ->
-                            maxVolume = value
-                            scope.launch { settings.setMaxVolumeOnRing(value) }
+                        Switch(checked = crescendo, onCheckedChange = { value ->
+                            crescendo = value
+                            scope.launch { settings.setCrescendo(value) }
+                        })
+                    },
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                SettingsRow(
+                    icon = Icons.Rounded.MusicNote,
+                    title = stringResource(R.string.settings_default_sound),
+                    supporting = soundLabel(defaultSound),
+                    onClick = { pickingDefaultSound = true },
+                )
+                SettingsRow(
+                    icon = Icons.Rounded.RecordVoiceOver,
+                    title = stringResource(R.string.settings_sound_policy),
+                    supporting = stringResource(soundPolicyLabel(soundPolicy)),
+                    onClick = { pickingPolicy = true },
+                )
+                SettingsRow(
+                    icon = Icons.Rounded.Image,
+                    title = stringResource(R.string.settings_show_images),
+                    supporting = stringResource(R.string.settings_show_images_hint),
+                    trailing = {
+                        Switch(checked = showImages, onCheckedChange = { value ->
+                            showImages = value
+                            scope.launch { settings.setShowImages(value) }
                         })
                     },
                 )
@@ -369,6 +434,49 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
         )
     }
 
+    if (pickingDefaultSound) {
+        SoundPickerSheet(
+            title = stringResource(R.string.settings_default_sound),
+            selected = defaultSound,
+            onSelect = { key ->
+                val chosen = key ?: SettingsRepository.DEFAULT_SOUND_KEY
+                defaultSound = chosen
+                scope.launch { settings.setDefaultSound(chosen) }
+            },
+            onDismiss = { pickingDefaultSound = false },
+        )
+    }
+
+    if (pickingPolicy) {
+        AlertDialog(
+            onDismissRequest = { pickingPolicy = false },
+            icon = { Icon(Icons.Rounded.RecordVoiceOver, contentDescription = null) },
+            title = { Text(stringResource(R.string.settings_sound_policy)) },
+            text = {
+                Column {
+                    SoundPolicy.entries.forEach { policy ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    soundPolicy = policy
+                                    scope.launch { settings.setSoundPolicy(policy) }
+                                    pickingPolicy = false
+                                }
+                                .padding(vertical = 4.dp),
+                        ) {
+                            RadioButton(selected = soundPolicy == policy, onClick = null)
+                            Text(stringResource(soundPolicyLabel(policy)), modifier = Modifier.padding(start = 12.dp))
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { pickingPolicy = false }) { Text(stringResource(R.string.common_cancel)) } },
+        )
+    }
+
     availableUpdate?.let { info ->
         UpdateDialog(info = info, onDismiss = { availableUpdate = null })
     }
@@ -448,4 +556,10 @@ private fun ReadinessRow(
             }
         },
     )
+}
+
+private fun soundPolicyLabel(policy: SoundPolicy): Int = when (policy) {
+    SoundPolicy.ALLOW_ALL -> R.string.settings_sound_policy_all
+    SoundPolicy.PRESETS_ONLY -> R.string.settings_sound_policy_presets
+    SoundPolicy.MINE_ONLY -> R.string.settings_sound_policy_mine
 }

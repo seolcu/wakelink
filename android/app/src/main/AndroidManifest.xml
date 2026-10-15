@@ -12,6 +12,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- In-app self-update from GitHub Releases (update/AppUpdater.kt). -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Only for recording a voice clip to send with wake-ups (sounds/RecordDialog.kt). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application
         android:name=".WakeLinkApplication"
@@ -54,8 +56,13 @@
              programmatically in onCreate (there is no manifest attribute
              for this) so lock-screen behavior stays consistent with the
              runtime unlock-required vs tap-to-dismiss setting. -->
+        <!-- Everything on the ring path is direct-boot aware, so a wake that
+             arrives after a reboot but before the first unlock (e.g. an
+             overnight auto-restart) still rings. Those components only
+             touch device-protected storage until the user unlocks. -->
         <activity
             android:name=".alarm.RingingActivity"
+            android:directBootAware="true"
             android:exported="false"
             android:excludeFromRecents="true"
             android:launchMode="singleInstance"
@@ -63,6 +70,7 @@
 
         <service
             android:name=".fcm.WakeFirebaseMessagingService"
+            android:directBootAware="true"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
@@ -71,11 +79,13 @@
 
         <service
             android:name=".alarm.AlarmForegroundService"
+            android:directBootAware="true"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 
         <receiver
             android:name=".alarm.StopAlarmReceiver"
+            android:directBootAware="true"
             android:exported="false" />
 
         <provider
@@ -90,8 +100,10 @@
 
         <receiver
             android:name=".boot.BootCompletedReceiver"
+            android:directBootAware="true"
             android:exported="false">
             <intent-filter>
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>

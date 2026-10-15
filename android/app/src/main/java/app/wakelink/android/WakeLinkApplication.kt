@@ -4,13 +4,12 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
+import app.wakelink.android.alarm.AckSender
+import app.wakelink.android.crypto.KeyPublisher
 import app.wakelink.android.data.SettingsRepository
-import app.wakelink.android.data.TokenStore
+import app.wakelink.android.data.isUserUnlocked
 import app.wakelink.android.data.restorePendingDndOverride
-import app.wakelink.android.fcm.TokenUploadWorker
-import app.wakelink.android.fcm.currentFcmToken
+import app.wakelink.android.fcm.uploadCurrentFcmToken
 import app.wakelink.android.status.ArmedStatusNotifier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -41,26 +40,34 @@ class WakeLinkApplication : Application() {
         super.onCreate()
         createNotificationChannels()
 
-        startupRestore = appScope.launch { restorePendingDndOverride(this@WakeLinkApplication) }
-        appScope.launch {
-            ArmedStatusNotifier.update(this@WakeLinkApplication, SettingsRepository(this@WakeLinkApplication).armed.first())
+        // This can run before the first unlock after a reboot (a wake push
+        // starting the direct-boot-aware alarm path), when only
+        // device-protected storage is readable: SettingsRepository is fine,
+        // TokenStore/WorkManager are not -- see onUserUnlocked().
+        val settings = SettingsRepository(this)
+        startupRestore = appScope.launch {
+            settings.migrateLegacyIfNeeded()
+            restorePendingDndOverride(this@WakeLinkApplication)
         }
-        appScope.launch { uploadCurrentFcmToken() }
+        appScope.launch {
+            startupRestore.join()
+            ArmedStatusNotifier.update(this@WakeLinkApplication, settings.armed.first())
+        }
+        if (isUserUnlocked(this)) onUserUnlocked()
     }
 
     /**
-     * Re-sends the current FCM token on every process start: registration
-     * may have happened without one (e.g. Play services were briefly
-     * unavailable), and onNewToken alone doesn't cover that case.
+     * Work that needs credential-protected storage. Runs on process start
+     * when already unlocked; BootCompletedReceiver covers the unlock that
+     * follows a reboot.
      */
-    private suspend fun uploadCurrentFcmToken() {
-        if (!TokenStore(this).isRegistered) return
-        val token = runCatching { currentFcmToken() }.getOrNull() ?: return
-        WorkManager.getInstance(this).enqueue(
-            OneTimeWorkRequestBuilder<TokenUploadWorker>()
-                .setInputData(TokenUploadWorker.inputData(token))
-                .build()
-        )
+    fun onUserUnlocked() {
+        appScope.launch {
+            startupRestore.join()
+            uploadCurrentFcmToken(this@WakeLinkApplication)
+            KeyPublisher.publish(this@WakeLinkApplication)
+            AckSender.flushPending(this@WakeLinkApplication)
+        }
     }
 
     private fun createNotificationChannels() {

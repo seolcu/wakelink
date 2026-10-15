@@ -1,15 +1,10 @@
 package app.wakelink.android
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawing
@@ -25,7 +20,6 @@ import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -41,6 +35,8 @@ import app.wakelink.android.pairing.RegisterScreen
 import app.wakelink.android.pairing.parseInviteCode
 import app.wakelink.android.settings.SettingsScreen
 import app.wakelink.android.status.ArmedStatusNotifier
+import app.wakelink.android.status.DeviceReadiness
+import app.wakelink.android.status.SetupScreen
 import app.wakelink.android.ui.theme.WakeLinkTheme
 import app.wakelink.android.update.AppUpdater
 import app.wakelink.android.update.UpdateDialog
@@ -72,16 +68,26 @@ class MainActivity : ComponentActivity() {
                 // Background (not surface) color, so the status-bar strip
                 // above each screen matches the screen itself.
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    RequestNotificationPermission()
                     StartupUpdateCheck()
 
                     val navController = rememberNavController()
                     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
 
+                    // Once per launch (and right after registering, which lands
+                    // here too): if anything a wake depends on is off -- the
+                    // notification permission, full-screen alarms, battery
+                    // optimization -- walk the user through fixing it.
+                    var setupChecked by rememberSaveable { mutableStateOf(false) }
+                    LaunchedEffect(currentRoute) {
+                        if (setupChecked || currentRoute != "contacts") return@LaunchedEffect
+                        setupChecked = true
+                        if (!DeviceReadiness.check(this@MainActivity).allReady) navController.navigate("setup")
+                    }
+
                     LaunchedEffect(pendingInviteCode, currentRoute) {
                         val code = pendingInviteCode ?: return@LaunchedEffect
-                        // Wait until registered: pairing needs an identity.
-                        if (currentRoute == null || currentRoute == "register") return@LaunchedEffect
+                        // Wait until registered (pairing needs an identity) and set up.
+                        if (currentRoute == null || currentRoute == "register" || currentRoute == "setup") return@LaunchedEffect
                         pendingInviteCode = null
                         navController.navigate("pairing?code=$code") {
                             popUpTo("contacts")
@@ -103,10 +109,14 @@ class MainActivity : ComponentActivity() {
                                 }
                             })
                         }
+                        composable("setup") {
+                            SetupScreen(onDone = { navController.popBackStack() })
+                        }
                         composable("contacts") {
                             ContactsScreen(
                                 onOpenPairing = { navController.navigate("pairing") },
                                 onOpenSettings = { navController.navigate("settings") },
+                                onOpenSetup = { navController.navigate("setup") },
                             )
                         }
                         composable(
@@ -164,29 +174,6 @@ class MainActivity : ComponentActivity() {
                     lifecycleScope.launch { settings.setSkippedUpdateVersion(info.versionName) }
                 },
             )
-        }
-    }
-
-    /**
-     * Android 13+ needs a runtime grant before *any* notification shows --
-     * including the alarm's full-screen intent and the always-visible
-     * armed-status notification -- so ask once up front.
-     */
-    @Composable
-    private fun RequestNotificationPermission() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-        val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) {
-                lifecycleScope.launch {
-                    ArmedStatusNotifier.update(applicationContext, SettingsRepository(applicationContext).armed.first())
-                }
-            }
-        }
-        LaunchedEffect(Unit) {
-            val granted = ContextCompat.checkSelfPermission(
-                this@MainActivity, Manifest.permission.POST_NOTIFICATIONS,
-            ) == PackageManager.PERMISSION_GRANTED
-            if (!granted) launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 }

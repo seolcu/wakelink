@@ -30,6 +30,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import app.wakelink.android.R
+import app.wakelink.android.crypto.KeyPublisher
 import app.wakelink.android.data.TokenStore
 import app.wakelink.android.fcm.currentFcmToken
 import app.wakelink.android.network.ApiClient
@@ -60,6 +61,7 @@ fun RegisterScreen(onRegistered: () -> Unit) {
                 val response = ApiClient.create(tokenStore)
                     .register(RegisterRequest(displayName = displayName.trim(), fcmToken = fcmToken))
                 tokenStore.save(response.userId, response.apiKey)
+                KeyPublisher.publish(context, freshAccount = true)
                 onRegistered()
             } catch (e: Exception) {
                 error = context.getString(R.string.register_failed, e.toUserMessage(context))

@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,14 +23,17 @@ import androidx.compose.material.icons.automirrored.rounded.CallReceived
 import androidx.compose.material.icons.rounded.Alarm
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -50,6 +55,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -63,15 +69,22 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.wakelink.android.R
+import app.wakelink.android.crypto.WakeComposer
 import app.wakelink.android.data.SettingsRepository
 import app.wakelink.android.data.TokenStore
+import app.wakelink.android.images.ImagePickerSheet
 import app.wakelink.android.network.ApiClient
+import app.wakelink.android.network.MediaView
 import app.wakelink.android.network.PairingView
 import app.wakelink.android.network.PatchPairingRequest
 import app.wakelink.android.network.TriggerView
 import app.wakelink.android.network.WakeLinkApi
 import app.wakelink.android.network.orThrow
 import app.wakelink.android.network.toUserMessage
+import app.wakelink.android.sounds.SoundPickerSheet
+import app.wakelink.android.sounds.SoundRef
+import app.wakelink.android.sounds.parseSoundRef
+import app.wakelink.android.sounds.soundLabel
 import app.wakelink.android.status.DeviceReadiness
 import app.wakelink.android.ui.OnResume
 import app.wakelink.android.ui.components.Avatar
@@ -101,11 +114,14 @@ private suspend fun awaitAck(api: WakeLinkApi, pairingId: Long, triggerId: Long)
     return AckCheck.PENDING
 }
 
+/** Readiness problems already shown in a dialog during this process's lifetime. */
+private val warningsAlreadyShown = mutableSetOf<String>()
+
 private data class WakeStatus(val kind: StatusKind, val text: String)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ContactsScreen(onOpenPairing: () -> Unit, onOpenSettings: () -> Unit) {
+fun ContactsScreen(onOpenPairing: () -> Unit, onOpenSettings: () -> Unit, onOpenSetup: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val tokenStore = remember { TokenStore(context) }
@@ -115,6 +131,7 @@ fun ContactsScreen(onOpenPairing: () -> Unit, onOpenSettings: () -> Unit) {
     var loading by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
     val warnings = remember { mutableStateListOf<String>() }
+    var popupWarnings by remember { mutableStateOf<List<String>>(emptyList()) }
 
     suspend fun reload() {
         loading = true
@@ -138,7 +155,39 @@ fun ContactsScreen(onOpenPairing: () -> Unit, onOpenSettings: () -> Unit) {
             if (!armed) warnings += context.getString(R.string.contacts_warning_disarmed)
             if (!readiness.notificationsEnabled) warnings += context.getString(R.string.contacts_warning_notifications)
             if (!readiness.fullScreenIntentAllowed) warnings += context.getString(R.string.contacts_warning_full_screen)
+            if (!readiness.ignoringBatteryOptimizations) warnings += context.getString(R.string.contacts_warning_battery)
+            // A banner is easy to scroll past, so a newly appearing problem
+            // also gets a dialog -- once per distinct problem per launch.
+            // (Being switched off is the user's own choice: banner only.)
+            val problems = warnings.drop(if (armed) 0 else 1)
+            val fresh = problems.filterNot { it in warningsAlreadyShown }
+            if (fresh.isNotEmpty()) {
+                warningsAlreadyShown += fresh
+                popupWarnings = problems
+            }
         }
+    }
+
+    if (popupWarnings.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = { popupWarnings = emptyList() },
+            icon = { Icon(Icons.Rounded.WarningAmber, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text(stringResource(R.string.contacts_problem_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    popupWarnings.forEach { Text("· $it", style = MaterialTheme.typography.bodyMedium) }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    popupWarnings = emptyList()
+                    onOpenSetup()
+                }) { Text(stringResource(R.string.contacts_problem_fix)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { popupWarnings = emptyList() }) { Text(stringResource(R.string.setup_later)) }
+            },
+        )
     }
 
     Scaffold(
@@ -248,10 +297,22 @@ private fun EmptyState(onOpenPairing: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, onChanged: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val settings = remember { SettingsRepository(context) }
+    // The sound this user sends to this contact; null lets the receiver's own sound play.
+    val soundKey by settings.soundForPairing(pairing.id).collectAsState(initial = null)
+    // The picture shown on their alarm screen; null = none.
+    val imageKey by settings.imageForPairing(pairing.id).collectAsState(initial = null)
+    var pickingImage by remember { mutableStateOf(false) }
+    var mySounds by remember { mutableStateOf<List<MediaView>?>(null) }
+    var pickingSound by remember { mutableStateOf(false) }
+    LaunchedEffect(soundKey) {
+        if (parseSoundRef(soundKey) is SoundRef.Custom) mySounds = runCatching { api.listSounds() }.getOrNull()
+    }
     var wakeStatus by remember { mutableStateOf<WakeStatus?>(null) }
     var waking by remember { mutableStateOf(false) }
     var showHistory by remember { mutableStateOf(false) }
@@ -327,7 +388,7 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
                     scope.launch {
                         try {
                             val triggerId = try {
-                                api.trigger(pairing.id).triggerId
+                                api.trigger(pairing.id, WakeComposer.request(context, api, pairing, soundKey, imageKey)).triggerId
                             } catch (e: Exception) {
                                 wakeStatus = WakeStatus(StatusKind.ERROR, context.getString(R.string.contacts_send_failed, e.toUserMessage(context)))
                                 return@launch
@@ -353,6 +414,30 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
                 Icon(Icons.Rounded.Alarm, contentDescription = null)
                 Spacer(Modifier.size(8.dp))
                 Text(stringResource(if (pairing.iCanWakeThem) R.string.contacts_wake else R.string.contacts_wake_off), style = MaterialTheme.typography.titleMedium)
+            }
+
+            if (pairing.iCanWakeThem) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AssistChip(
+                        onClick = { pickingSound = true },
+                        leadingIcon = { Icon(Icons.Rounded.MusicNote, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                        label = { Text(stringResource(R.string.contacts_sound, soundLabel(soundKey, mySounds))) },
+                    )
+                    AssistChip(
+                        onClick = { pickingImage = true },
+                        leadingIcon = { Icon(Icons.Rounded.Image, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                        label = {
+                            Text(stringResource(if (imageKey == null) R.string.contacts_image_none else R.string.contacts_image_set))
+                        },
+                    )
+                }
+                if (pairing.otherPublicKey == null && (soundKey != null || imageKey != null)) {
+                    Text(
+                        stringResource(R.string.contacts_extras_need_update, pairing.otherUserName),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
 
             wakeStatus?.let { StatusPill(it.kind, it.text, Modifier.fillMaxWidth()) }
@@ -397,6 +482,29 @@ private fun PairingCard(pairing: PairingView, api: WakeLinkApi, myUserId: Long, 
                 }
             }
         }
+    }
+
+    if (pickingSound) {
+        SoundPickerSheet(
+            title = stringResource(R.string.contacts_sound_title, pairing.otherUserName),
+            selected = soundKey,
+            onSelect = { key -> scope.launch { settings.setSoundForPairing(pairing.id, key) } },
+            onDismiss = {
+                pickingSound = false
+                scope.launch { mySounds = runCatching { api.listSounds() }.getOrNull() }
+            },
+            api = api,
+        )
+    }
+
+    if (pickingImage) {
+        ImagePickerSheet(
+            title = stringResource(R.string.contacts_image_title, pairing.otherUserName),
+            selected = imageKey,
+            api = api,
+            onSelect = { key -> scope.launch { settings.setImageForPairing(pairing.id, key) } },
+            onDismiss = { pickingImage = false },
+        )
     }
 
     if (confirmUnpair) {

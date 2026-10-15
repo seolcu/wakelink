@@ -23,8 +23,14 @@ import androidx.core.app.ServiceCompat
 import app.wakelink.android.R
 import app.wakelink.android.WakeLinkApplication
 import app.wakelink.android.data.SettingsRepository
-import app.wakelink.android.data.TokenStore
-import app.wakelink.android.network.ApiClient
+import app.wakelink.android.crypto.fromB64
+import app.wakelink.android.sounds.ImageCache
+import app.wakelink.android.sounds.SoundCache
+import app.wakelink.android.sounds.SoundRef
+import app.wakelink.android.sounds.chooseSound
+import app.wakelink.android.sounds.parseSoundRef
+import app.wakelink.android.sounds.presetSound
+import app.wakelink.android.sounds.presetUri
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -36,6 +42,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
+import java.io.File
 
 /**
  * The core of the whole app: plays a looping alarm on STREAM_ALARM (which
@@ -51,6 +59,8 @@ class AlarmForegroundService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var startJob: Job? = null
     private var autoStopJob: Job? = null
+    private var rampJob: Job? = null
+    private var imageJob: Job? = null
     private var mediaPlayer: MediaPlayer? = null
     private var vibrator: Vibrator? = null
     private var appliedDndOverride = false
@@ -72,6 +82,10 @@ class AlarmForegroundService : Service() {
         val triggerId = intent?.getLongExtra(EXTRA_TRIGGER_ID, -1L) ?: -1L
         val fromDisplayName = intent?.getStringExtra(EXTRA_FROM_DISPLAY_NAME)
             ?: getString(R.string.unknown_sender)
+        val requestedSound = parseSoundRef(intent?.getStringExtra(EXTRA_SOUND))
+        val soundContentKey = intent?.getStringExtra(EXTRA_SOUND_KEY)?.fromB64()
+        val requestedImage = parseSoundRef(intent?.getStringExtra(EXTRA_IMAGE)) as? SoundRef.Custom
+        val imageContentKey = intent?.getStringExtra(EXTRA_IMAGE_KEY)?.fromB64()
 
         // startForeground must be called within moments of the service
         // being started (from startForegroundService), before any
@@ -102,14 +116,23 @@ class AlarmForegroundService : Service() {
             if (settings.dndBypassEnabled.first()) {
                 applyDndOverrideIfNeeded(settings)
             }
-            if (settings.maxVolumeOnRing.first()) {
-                applyMaxVolume()
-            }
-
+            // Vibrate right away: fetching a sender's custom sound can take a
+            // few seconds, and the phone should already be buzzing by then.
             startVibration()
+            // The picture never delays the sound: it loads alongside and
+            // shows up on the alarm screen whenever it's ready.
+            if (requestedImage != null && settings.showImages.first()) {
+                imageJob = scope.launch {
+                    _ringingImage.value = ImageCache.obtain(applicationContext, requestedImage, IMAGE_TIMEOUT_MS, imageContentKey)
+                }
+            }
+            applyAlarmVolume(settings.volumePercent.first())
+
+            val own = parseSoundRef(settings.defaultSound.first()) ?: SoundRef.Device
+            val chosen = chooseSound(requestedSound, settings.soundPolicy.first(), own)
             // Only ack once sound is actually playing -- the sender's UI
             // treats an ack as "it rang", so a silent failure must not ack.
-            if (startPlayback()) ackTrigger(triggerId)
+            if (startPlayback(chosen, own, settings.crescendo.first(), soundContentKey)) ackTrigger(triggerId)
 
             autoStopJob = scope.launch {
                 delay(AUTO_STOP_AFTER_MS)
@@ -180,34 +203,59 @@ class AlarmForegroundService : Service() {
         appliedDndOverride = true
     }
 
-    private fun applyMaxVolume() {
+    /**
+     * Sets the alarm stream to [percent] of its max for the duration of the
+     * ring (restored in [releaseOutputs]). The receiver owns this setting, so
+     * a phone left on a low alarm volume still wakes its owner.
+     */
+    private fun applyAlarmVolume(percent: Int) {
         val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val max = am.getStreamMaxVolume(AudioManager.STREAM_ALARM)
+        val target = (max * percent / 100.0).roundToInt().coerceIn(1, max)
         priorAlarmVolume = am.getStreamVolume(AudioManager.STREAM_ALARM)
-        am.setStreamVolume(AudioManager.STREAM_ALARM, am.getStreamMaxVolume(AudioManager.STREAM_ALARM), 0)
+        am.setStreamVolume(AudioManager.STREAM_ALARM, target, 0)
     }
 
     /**
-     * Tries the user's chosen alarm sound first, then progressively more
-     * generic system defaults -- a deleted custom alarm tone must not mean
-     * a silent wake. Returns whether anything is actually playing.
+     * Plays [chosen], falling back to the receiver's [own] sound and then to
+     * progressively more generic system tones and finally a bundled preset --
+     * a deleted alarm tone or an unreachable recording must never mean a
+     * silent wake. Returns whether anything is actually playing.
      */
-    private fun startPlayback(): Boolean {
-        val candidates = listOfNotNull(
-            RingtoneManager.getActualDefaultRingtoneUri(applicationContext, RingtoneManager.TYPE_ALARM),
-            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
-            Settings.System.DEFAULT_ALARM_ALERT_URI,
-            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE),
-        ).distinct()
+    private suspend fun startPlayback(chosen: SoundRef, own: SoundRef, crescendo: Boolean, contentKey: ByteArray?): Boolean {
+        val candidates = buildList {
+            addAll(urisFor(chosen, contentKey))
+            if (own != chosen) addAll(urisFor(own))
+            addAll(deviceAlarmUris())
+            presetSound("beep")?.let { add(presetUri(applicationContext, it)) }
+        }.distinct()
 
         for (uri in candidates) {
-            val player = tryCreatePlayer(uri) ?: continue
+            val player = tryCreatePlayer(uri, startVolume = if (crescendo) CRESCENDO_START else 1f) ?: continue
             mediaPlayer = player
+            if (crescendo) rampUp(player)
             return true
         }
         return false
     }
 
-    private fun tryCreatePlayer(uri: Uri): MediaPlayer? {
+    private suspend fun urisFor(ref: SoundRef, contentKey: ByteArray? = null): List<Uri> = when (ref) {
+        SoundRef.Device -> deviceAlarmUris()
+        is SoundRef.Preset -> listOfNotNull(presetSound(ref.name)?.let { presetUri(applicationContext, it) })
+        is SoundRef.Custom -> listOfNotNull(
+            SoundCache.obtain(applicationContext, ref, CUSTOM_SOUND_TIMEOUT_MS, contentKey)?.let { Uri.fromFile(it) }
+        )
+    }
+
+    /** The user's chosen system alarm tone first, then progressively more generic defaults. */
+    private fun deviceAlarmUris(): List<Uri> = listOfNotNull(
+        RingtoneManager.getActualDefaultRingtoneUri(applicationContext, RingtoneManager.TYPE_ALARM),
+        RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
+        Settings.System.DEFAULT_ALARM_ALERT_URI,
+        RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE),
+    )
+
+    private fun tryCreatePlayer(uri: Uri, startVolume: Float): MediaPlayer? {
         val player = MediaPlayer()
         return try {
             player.setAudioAttributes(
@@ -219,11 +267,26 @@ class AlarmForegroundService : Service() {
             player.setDataSource(applicationContext, uri)
             player.isLooping = true
             player.prepare()
+            player.setVolume(startVolume, startVolume)
             player.start()
             player
         } catch (_: Exception) {
             player.release()
             null
+        }
+    }
+
+    /** "Gradually louder": from [CRESCENDO_START] to full over [CRESCENDO_MS]. */
+    private fun rampUp(player: MediaPlayer) {
+        rampJob = scope.launch {
+            val steps = (CRESCENDO_MS / CRESCENDO_STEP_MS).toInt()
+            for (i in 1..steps) {
+                delay(CRESCENDO_STEP_MS)
+                val fraction = i.toFloat() / steps
+                // Squared so the perceived loudness rises roughly evenly.
+                val v = CRESCENDO_START + (1f - CRESCENDO_START) * fraction * fraction
+                runCatching { player.setVolume(v, v) }
+            }
         }
     }
 
@@ -244,21 +307,19 @@ class AlarmForegroundService : Service() {
     }
 
     private fun ackTrigger(triggerId: Long) {
-        if (triggerId < 0) return // local self-test alarm, nothing to ack
+        // Process-wide scope: the ack must outlive this service if the user
+        // stops the alarm right away.
         (application as WakeLinkApplication).appScope.launch {
-            try {
-                val tokenStore = TokenStore(applicationContext)
-                if (tokenStore.isRegistered) {
-                    ApiClient.create(tokenStore).ackTrigger(triggerId)
-                }
-            } catch (_: Exception) {
-                // Best-effort: a failed ack doesn't stop the alarm from
-                // ringing, it only leaves the sender's UI uncertain.
-            }
+            AckSender.ackOrQueue(applicationContext, triggerId)
         }
     }
 
     private fun releaseOutputs() {
+        rampJob?.cancel()
+        rampJob = null
+        imageJob?.cancel()
+        imageJob = null
+        _ringingImage.value = null
         mediaPlayer?.apply {
             runCatching { stop() }
             release()
@@ -308,11 +369,28 @@ class AlarmForegroundService : Service() {
         const val ACTION_STOP = "app.wakelink.android.alarm.ACTION_STOP"
         const val EXTRA_TRIGGER_ID = "trigger_id"
         const val EXTRA_FROM_DISPLAY_NAME = "from_display_name"
+
+        /** A [SoundRef] key the sender picked; the receiver's policy decides whether it's used. */
+        const val EXTRA_SOUND = "sound"
+
+        /** Base64 content key for an end-to-end encrypted custom [EXTRA_SOUND]. */
+        const val EXTRA_SOUND_KEY = "sound_key"
+
+        /** "custom:<id>:<sha256>" of a picture to show while ringing, and its content key. */
+        const val EXTRA_IMAGE = "image"
+        const val EXTRA_IMAGE_KEY = "image_key"
         private const val NOTIFICATION_ID = 42
 
         /** Gives up after this long so an unattended phone doesn't ring until the battery dies. */
         private const val AUTO_STOP_AFTER_MS = 5 * 60 * 1000L
         private val VIBRATION_PATTERN = longArrayOf(0, 800, 600)
+
+        /** How long a not-yet-cached sender sound may take to download before falling back. */
+        private const val CUSTOM_SOUND_TIMEOUT_MS = 6_000L
+        private const val IMAGE_TIMEOUT_MS = 30_000L
+        private const val CRESCENDO_START = 0.15f
+        private const val CRESCENDO_MS = 30_000L
+        private const val CRESCENDO_STEP_MS = 1_000L
 
         private val _ringingFrom = MutableStateFlow<String?>(null)
 
@@ -323,5 +401,10 @@ class AlarmForegroundService : Service() {
          * however the alarm ends (notification action, auto-stop, disarmed).
          */
         val ringingFrom: StateFlow<String?> = _ringingFrom.asStateFlow()
+
+        private val _ringingImage = MutableStateFlow<File?>(null)
+
+        /** The (decrypted, cached) picture the sender attached, once it has loaded. */
+        val ringingImage: StateFlow<File?> = _ringingImage.asStateFlow()
     }
 }

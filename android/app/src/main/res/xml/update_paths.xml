@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Only the downloaded-update directory is shareable with the system installer. -->
+<!-- Files this app hands to other apps: downloaded updates (to the system
+     installer) and the camera-capture target (to the camera app). -->
 <paths>
     <cache-path name="updates" path="updates/" />
+    <cache-path name="capture" path="capture/" />
 </paths>

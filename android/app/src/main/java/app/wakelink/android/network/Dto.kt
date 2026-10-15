@@ -41,6 +41,8 @@ data class PairingView(
     @Json(name = "i_can_wake_them") val iCanWakeThem: Boolean,
     @Json(name = "they_can_wake_me") val theyCanWakeMe: Boolean,
     @Json(name = "created_at") val createdAt: Long,
+    /** The contact's device key for sealing wakes end to end; null if their app predates it. */
+    @Json(name = "other_public_key") val otherPublicKey: String? = null,
 )
 
 data class PatchPairingRequest(
@@ -73,4 +75,24 @@ data class PatchMeRequest(
 
 data class RotateKeyResponse(
     @Json(name = "api_key") val apiKey: String,
+)
+
+/**
+ * [sound] is a SoundRef key ("preset:chime", "custom:12"); null lets the
+ * receiver pick. [image] is "custom:<id>" of one of the user's images, or
+ * null for none.
+ */
+data class TriggerRequest(val sound: String? = null, val image: String? = null, val sealed: String? = null)
+
+data class PublicKeyRequest(@Json(name = "public_key") val publicKey: String)
+
+/** A recording, audio file or image the user uploaded to send with wake-ups. */
+data class MediaView(
+    val id: Long,
+    val kind: String,
+    val name: String,
+    val mime: String,
+    val size: Long,
+    val sha256: String,
+    @Json(name = "created_at") val createdAt: Long,
 )

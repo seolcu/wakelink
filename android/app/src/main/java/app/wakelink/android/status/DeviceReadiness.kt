@@ -17,6 +17,9 @@ data class DeviceReadiness(
     val fullScreenIntentAllowed: Boolean,
     val ignoringBatteryOptimizations: Boolean,
 ) {
+    /** Everything a wake needs to reliably reach this device. */
+    val allReady: Boolean get() = notificationsEnabled && fullScreenIntentAllowed && ignoringBatteryOptimizations
+
     companion object {
         fun check(context: Context): DeviceReadiness {
             val nm = context.getSystemService(NotificationManager::class.java)

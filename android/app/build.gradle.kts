@@ -29,8 +29,8 @@ android {
         // Bump both for every release: versionName becomes the GitHub
         // release tag (v<versionName>) the in-app updater compares against,
         // and Android refuses to install a lower versionCode over a higher one.
-        versionCode = 5
-        versionName = "0.2.3"
+        versionCode = 6
+        versionName = "0.3.0"
 
         // Overridable at build time for self-hosted forks; the official
         // Play Store build ships with the maintainer's default instance.
@@ -128,6 +128,7 @@ dependencies {
     implementation(libs.work.runtime.ktx)
     implementation(libs.datastore.preferences)
     implementation(libs.security.crypto)
+    implementation(libs.tink.android)
 
     testImplementation(libs.junit)
 }
