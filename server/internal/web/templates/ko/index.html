@@ -1,5 +1,5 @@
-{{define "title"}}WakeLink — 알람 못 들어도, 친구가 깨워줄게요{{end}}
-{{define "description"}}무음 모드여도 믿는 사람이 버튼 하나로 내 폰 알람을 울려 깨워주는 Android 앱. 서로 동의한 사람끼리만 연결돼요.{{end}}
+{{define "title"}}WakeLink — 무음이어도 울리는, 친구가 보내는 알람{{end}}
+{{define "description"}}믿는 사람이 버튼 하나로 내 폰에 알람을 울려 주는 Android 앱. 무음 모드에서도 울리고, 서로 동의한 사람끼리만 연결돼요.{{end}}
 {{define "content"}}
 <header class="hero">
   <div class="sky" aria-hidden="true">
@@ -16,8 +16,8 @@
     <div class="hero-grid">
       <div class="hero-copy">
         <p class="eyebrow">알람 끄고 다시 잠든 친구에게</p>
-        <h1><span class="line">알람 못 들어도,</span> <span class="line accent">친구가 깨워줄게요</span></h1>
-        <p class="lead">무음 모드여도 믿는 사람이 버튼 하나로 내 폰에서 큰 알람을 울려줘요. 진짜 울렸는지도 바로 확인돼요.</p>
+        <h1><span class="line">무음이어도 울리는</span> <span class="line accent">친구가 보내는 알람</span></h1>
+        <p class="lead">믿는 사람이 버튼 하나로 내 폰에 큰 알람을 울리고, 실제로 울렸는지까지 바로 확인해요.</p>
         <div class="cta-row">
           <a class="btn btn-primary" href="{{.DownloadHref}}">
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v9.59l3.3-3.3a1 1 0 1 1 1.4 1.42l-5 5a1 1 0 0 1-1.4 0l-5-5a1 1 0 1 1 1.4-1.42l3.3 3.3V4a1 1 0 0 1 1-1ZM5 19a1 1 0 1 0 0 2h14a1 1 0 1 0 0-2H5Z"/></svg>
@@ -33,7 +33,7 @@
           <div class="screen screen-ringing">
             <div class="ring-time">06:42</div>
             <div class="ring-sun"><span></span></div>
-            <p class="ring-who"><b>지민</b>님이 깨우고 있어요</p>
+            <p class="ring-who"><b>지민</b>님이 깨우는 중</p>
             <div class="ring-stop">알람 끄기</div>
           </div>
         </div>
@@ -43,22 +43,22 @@
             <div class="card">
               <div class="card-row">
                 <span class="avatar avatar-1">지</span>
-                <div class="card-text"><b>지민</b><small>서로 깨울 수 있어요</small></div>
+                <div class="card-text"><b>지민</b><small>서로 깨우기 가능</small></div>
               </div>
               <div class="wake-btn">깨우기</div>
-              <div class="pill pill-ok">● 지민님 폰에서 알람이 울리고 있어요</div>
+              <div class="pill pill-ok">● 지민님 폰에서 울리는 중</div>
             </div>
             <div class="card">
               <div class="card-row">
                 <span class="avatar avatar-3">엄</span>
-                <div class="card-text"><b>엄마</b><small>상대만 나를 깨울 수 있어요</small></div>
+                <div class="card-text"><b>엄마</b><small>상대만 깨울 수 있음</small></div>
               </div>
               <div class="wake-btn wake-btn-off">깨우기 꺼져 있음</div>
             </div>
             <div class="card">
               <div class="card-row">
                 <span class="avatar avatar-5">현</span>
-                <div class="card-text"><b>현우</b><small>서로 깨울 수 있어요</small></div>
+                <div class="card-text"><b>현우</b><small>서로 깨우기 가능</small></div>
               </div>
               <div class="wake-btn">깨우기</div>
             </div>
@@ -78,17 +78,17 @@
         <li class="step">
           <span class="step-num">1</span>
           <h3>둘 다 앱 설치</h3>
-          <p>이름만 정하면 돼요. 전화번호도, 이메일도 필요 없어요.</p>
+          <p>이름만 정하면 끝. 전화번호도, 이메일도 필요 없어요.</p>
         </li>
         <li class="step">
           <span class="step-num">2</span>
           <h3>초대 코드로 연결</h3>
-          <p>한 사람이 만든 코드를 다른 사람이 직접 입력해야 연결돼요. 링크로 보내도 돼요.</p>
+          <p>한 사람이 만든 코드를 다른 사람이 직접 입력하면 연결 완료. 링크로 보내도 돼요.</p>
         </li>
         <li class="step">
           <span class="step-num">3</span>
           <h3>깨우기 버튼 한 번</h3>
-          <p>상대 폰에서 알람이 크게 울리고, 실제로 울렸는지 내 화면에 바로 표시돼요.</p>
+          <p>상대 폰에 큰 알람이 울리고, 실제로 울렸는지가 내 화면에 바로 떠요.</p>
         </li>
       </ol>
     </div>
@@ -97,19 +97,19 @@
   <section class="section">
     <div class="wrap">
       <h2>내 소리, 내 사진으로 깨우기</h2>
-      <p class="section-lead">똑같은 알람 소리는 지겨우니까요. 무엇을 울리고 보여줄지 보내는 사람이 고르고, 받는 사람이 허용 범위를 정해요.</p>
+      <p class="section-lead">똑같은 알람 소리는 지겨우니까. 무엇을 울리고 보여 줄지는 보내는 사람이, 허용 범위는 받는 사람이 정해요.</p>
       <div class="features">
         <div class="feature">
           <h3>기본 벨소리 6가지</h3>
-          <p>클래식 비프, 디지털, 차임, 점점 높아지는 음, 종소리, 마림바. 미리 들어보고 고를 수 있어요.</p>
+          <p>클래식 비프, 디지털, 차임, 점점 높아지는 음, 종소리, 마림바 중에서 미리 듣고 선택.</p>
         </div>
         <div class="feature">
           <h3>내 목소리, 내 음악</h3>
-          <p>"일어나!"를 15초까지 녹음하거나, 폰에 있는 오디오 파일을 보낼 수 있어요.</p>
+          <p>"일어나!"를 15초까지 녹음하거나, 폰에 있는 오디오 파일을 그대로 보내기.</p>
         </div>
         <div class="feature">
           <h3>알람 화면에 사진</h3>
-          <p>사진이나 움직이는 GIF를 상대 알람 화면에 띄워요. 카메라로 바로 찍어서 보낼 수도 있어요.</p>
+          <p>사진이나 움직이는 GIF를 상대 알람 화면에. 카메라로 바로 찍어 보낼 수도 있어요.</p>
         </div>
       </div>
     </div>
@@ -120,16 +120,16 @@
       <div>
         <h2>무음 모드여도 울리는 이유</h2>
         <p>폰을 무음으로 해도 시계 앱 알람은 울리죠. 무음 모드는 벨소리와 알림 소리만 끄고 <b>알람 소리는 그대로 두기</b> 때문이에요.</p>
-        <p>WakeLink도 같은 알람 채널로 울려요. 그래서 특별한 권한 없이도 무음·진동 모드를 뚫고 깨울 수 있어요.</p>
-        <p>폰의 알람 볼륨이 작게 되어 있어도 괜찮아요. 울리는 동안은 받는 사람이 정한 WakeLink 볼륨을 쓰고, 끝나면 원래대로 돌려놔요.</p>
-        <p class="muted">방해 금지 모드의 '완전 무음'은 알람까지 막아요. 이것까지 뚫고 싶다면 설정에서 직접 켤 수 있고, 울리는 동안만 바꿨다가 끝나면 원래대로 돌려놔요.</p>
+        <p>WakeLink도 같은 알람 채널을 써서, 특별한 권한 없이 무음·진동 모드에서도 울려요.</p>
+        <p>폰의 알람 볼륨이 작아도, 울리는 동안만 받는 사람이 정한 볼륨으로 바꿨다가 끝나면 되돌려 놓아요.</p>
+        <p class="muted">방해 금지의 '완전 무음'은 알람까지 막아요. 설정에서 켜 두면 이것도 울리는 동안만 풀었다가 다시 돌려놓아요.</p>
       </div>
       <ul class="mode-list" aria-label="모드별 동작">
-        <li><span class="mode-name">소리 모드</span><span class="mode-yes">울려요</span></li>
-        <li><span class="mode-name">진동 모드</span><span class="mode-yes">울려요</span></li>
-        <li><span class="mode-name">무음 모드</span><span class="mode-yes">울려요</span></li>
-        <li><span class="mode-name">방해 금지 (알람 허용)</span><span class="mode-yes">울려요</span></li>
-        <li><span class="mode-name">방해 금지 '완전 무음'</span><span class="mode-opt">설정에서 켜면 울려요</span></li>
+        <li><span class="mode-name">소리 모드</span><span class="mode-yes">울림</span></li>
+        <li><span class="mode-name">진동 모드</span><span class="mode-yes">울림</span></li>
+        <li><span class="mode-name">무음 모드</span><span class="mode-yes">울림</span></li>
+        <li><span class="mode-name">방해 금지 (알람 허용)</span><span class="mode-yes">울림</span></li>
+        <li><span class="mode-name">방해 금지 '완전 무음'</span><span class="mode-opt">설정에서 켜면 울림</span></li>
       </ul>
     </div>
   </section>
@@ -141,27 +141,27 @@
       <div class="features">
         <div class="feature">
           <h3>서로 동의해야 연결</h3>
-          <p>초대 코드를 받은 사람이 직접 입력해야만 연결돼요. 몰래 추가하는 방법은 없어요.</p>
+          <p>초대 코드를 받은 사람이 직접 입력해야만 연결. 몰래 추가하는 방법은 없어요.</p>
         </div>
         <div class="feature">
           <h3>방향별로 따로 허락</h3>
-          <p>"나는 깨울 수 있지만 상대는 나를 못 깨우게"처럼 각자 정할 수 있어요.</p>
+          <p>"나는 깨울 수 있지만 상대는 나를 못 깨우게"처럼 각자 따로 설정.</p>
         </div>
         <div class="feature">
           <h3>언제든 끄거나 끊기</h3>
-          <p>앱 전체를 끄거나, 특정 사람만 막거나, 연결을 아예 끊을 수 있어요.</p>
+          <p>앱 전체 끄기, 특정 사람만 막기, 연결 끊기 모두 언제든 가능.</p>
         </div>
         <div class="feature">
-          <h3>상태가 늘 보여요</h3>
-          <p>지금 깨우기를 받는 중인지 앱 첫 화면 맨 위에 항상 표시되고, 바로 끌 수 있어요.</p>
+          <h3>상태는 늘 첫 화면에</h3>
+          <p>깨우기를 받는 중인지 첫 화면 맨 위에 항상 표시. 거기서 바로 끌 수도 있어요.</p>
         </div>
         <div class="feature">
           <h3>장난 방지</h3>
-          <p>같은 사람에게는 30초에 한 번, 24시간 동안 20번까지만 보낼 수 있어요.</p>
+          <p>같은 사람에게는 30초에 한 번, 24시간에 20번까지만.</p>
         </div>
         <div class="feature">
           <h3>종단간 암호화</h3>
-          <p>보낸 사람 이름, 녹음, 파일, 사진은 받는 사람 폰만 열 수 있게 암호화돼요. 서버는 암호문만 전달하고, 계정을 지우면 모두 삭제돼요.</p>
+          <p>보낸 사람 이름, 녹음, 파일, 사진은 받는 사람 폰만 열 수 있게 암호화. 서버는 암호문만 전달하고, 계정을 지우면 모두 삭제돼요.</p>
         </div>
       </div>
     </div>
@@ -172,7 +172,7 @@
       <h2>자주 묻는 질문</h2>
       <details class="faq">
         <summary>아이폰에서도 쓸 수 있나요?</summary>
-        <p>아직은 Android만 지원해요. 깨우는 사람과 깨워지는 사람 모두 Android 폰에 앱이 있어야 해요.</p>
+        <p>아직은 Android만 지원해요. 깨우는 사람과 깨워지는 사람 모두 Android 폰이 있어야 해요.</p>
       </details>
       <details class="faq">
         <summary>앱은 어떤 언어를 지원하나요?</summary>
@@ -180,19 +180,19 @@
       </details>
       <details class="faq">
         <summary>플레이 스토어에 없는데 설치해도 괜찮나요?</summary>
-        <p>위 버튼으로 받는 APK는 GitHub에 공개된 소스로 빌드되고, 늘 같은 키로 서명돼요. 처음 한 번 브라우저나 파일 앱에 "출처를 알 수 없는 앱 설치"를 허용하면 설치할 수 있어요.</p>
+        <p>위 버튼으로 받는 APK는 GitHub에 공개된 소스로 빌드되고, 늘 같은 키로 서명돼요. 처음 한 번만 브라우저나 파일 앱에 "출처를 알 수 없는 앱 설치"를 허용하면 돼요.</p>
       </details>
       <details class="faq">
         <summary>업데이트는 어떻게 하나요?</summary>
-        <p>앱을 열 때 새 버전이 있으면 알려줘요. 누르면 바로 내려받아 설치 화면이 열려요. 설정 → 앱 업데이트에서 직접 확인할 수도 있어요.</p>
+        <p>새 버전이 나오면 알림이 오고, 누르면 바로 설치 화면까지 열려요. 설정 → 앱 업데이트에서 직접 확인도 가능.</p>
       </details>
       <details class="faq">
         <summary>배터리 절약 때문에 안 울리면 어떡하죠?</summary>
-        <p>앱이 처음 켜질 때 알림, 잠금 화면 전체 화면 알람, 배터리 최적화 제외를 하나씩 안내해요. 나중에 꺼지면 앱을 열 때 다시 알려줘요. 삼성 폰은 '절전 앱' 목록에서도 빼 주세요.</p>
+        <p>앱을 처음 켜면 알림, 잠금 화면 전체 화면 알람, 배터리 최적화 제외를 차례로 안내하고, 나중에 꺼지면 다시 알려 줘요. 삼성 폰은 '절전 앱' 목록에서도 빼 주세요.</p>
       </details>
       <details class="faq">
         <summary>보낸 사진과 녹음은 누가 볼 수 있나요?</summary>
-        <p>깨우기를 받는 사람만요. 올리기 전에 내 폰에서 암호화되고, 그 열쇠는 깨울 때 받는 사람 폰만 열 수 있게 다시 암호화해서 보내요. 서버와 푸시 알림을 전달하는 Google은 내용을 볼 수 없어요. 계정을 지우면 서버에서도 삭제돼요.</p>
+        <p>깨우기를 받는 사람만요. 올리기 전에 내 폰에서 암호화되고, 그 열쇠는 받는 사람 폰만 열 수 있게 봉인해서 보내요. 서버도, 푸시를 전달하는 Google도 내용을 볼 수 없고, 계정을 지우면 서버에서도 지워져요.</p>
       </details>
       <details class="faq">
         <summary>폰을 재부팅하고 잠금을 아직 안 풀었어도 울리나요?</summary>
@@ -200,7 +200,7 @@
       </details>
       <details class="faq">
         <summary>깨우기를 보냈는데 상대 폰이 꺼져 있으면요?</summary>
-        <p>보낸 쪽 화면에 "울림 미확인"으로 표시돼요. 상대 폰에서 실제로 소리가 나기 시작해야만 "울림 확인됨"이 떠요.</p>
+        <p>보낸 쪽 화면에 "울림 미확인"으로 표시돼요. 상대 폰에서 소리가 실제로 나야만 "울림 확인됨"으로 바뀌어요.</p>
       </details>
       <details class="faq">
         <summary>제 서버에서 직접 운영할 수 있나요?</summary>
@@ -213,7 +213,7 @@
     <div class="wrap narrow center">
       <img src="{{asset "logo.svg"}}" alt="" width="72" height="72">
       <h2>내일 아침이 걱정된다면</h2>
-      <p>깨워줄 사람과 같이 설치해 두세요.</p>
+      <p>깨워 줄 사람과 같이 설치해 두세요.</p>
       <a class="btn btn-primary" href="{{.DownloadHref}}">Android 앱 받기</a>
     </div>
   </section>

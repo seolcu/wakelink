@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://wake.seolcu.com"><img src="server/internal/web/assets/og.png" alt="WakeLink — 알람 못 들어도, 친구가 깨워줄게요" width="720"></a>
+  <a href="https://wake.seolcu.com"><img src="server/internal/web/assets/og.png" alt="WakeLink — 무음이어도 울리는, 친구가 보내는 알람" width="720"></a>
 </p>
 
 <p align="center">
