@@ -170,6 +170,80 @@ auto-stop, disarmed). The DND startup self-heal runs in
 (`data/DndRestore.kt`), and the service joins it before applying a new
 override so the two can't race.
 
+If the push can't start the foreground service (Android 12+ background
+start restrictions, vendor battery savers), `WakeFirebaseMessagingService`
+falls back to a full-screen notification whose `RingingActivity` starts
+the service from the foreground -- a wake must never fail silently.
+
+### Direct Boot (ringing before the first unlock after a reboot)
+
+The whole ring path (`WakeFirebaseMessagingService`,
+`AlarmForegroundService`, `RingingActivity`, `StopAlarmReceiver`,
+`BootCompletedReceiver`) is `directBootAware`, so an overnight
+auto-restart doesn't silence the morning. Consequences to respect:
+
+- `SettingsRepository` lives in **device-protected** SharedPreferences
+  (migrated once from the old DataStore). `TokenStore`, `DeviceKeys`,
+  `MediaKeyStore` and WorkManager are credential-protected: check
+  `isUserUnlocked()` before touching them on anything that can run locked
+  (`WakeLinkApplication.onCreate` splits work into locked-safe and
+  `onUserUnlocked()`).
+- An alarm that rings while locked (or offline) queues its ack in
+  `SettingsRepository`; `AckSender.flushPending` sends it on
+  `BOOT_COMPLETED` (= first unlock) or the next app start.
+- Sealed wake details can't be opened while locked, so such a wake rings
+  with the receiver's own sound and an "unknown sender" name.
+
+### Sounds, pictures and volume
+
+- The receiver owns loudness: `volumePercent` sets `STREAM_ALARM` for the
+  ring and restores it after; optional crescendo ramps the player volume.
+- Built-in sounds are synthesized by `scripts/gen-ringtones.py` into
+  `res/raw/ringtone_<name>.ogg` (Ogg Vorbis: plays on every supported
+  version). Preset names are duplicated in `sounds/SoundRef.kt`
+  (`PRESET_NAMES`) and `server/internal/api/media.go` (`presetSounds`).
+- Sound keys: `device`, `preset:<name>`, `custom:<id>` (sender side),
+  `custom:<id>:<sha256>` (in a wake). `chooseSound()` applies the
+  receiver's `SoundPolicy`; `AlarmForegroundService.startPlayback` then
+  falls back chosen -> own -> device tones -> bundled beep, so a missing or
+  undownloadable sound never means silence.
+- Senders can upload voice recordings (`RecordDialog`, <= 15 s AAC) and
+  audio files (<= 2 MB), and pictures (`images/`, photos downscaled to
+  1280 px JPEG, GIFs kept as-is up to 3 MB). The picture loads alongside
+  the sound and shows on `RingingActivity` when ready (`ringingImage`).
+  Receivers can turn pictures off (`showImages`).
+- `MediaCache` (`SoundCache`, `ImageCache`) keeps decrypted copies in
+  device-protected storage, named by the server-side SHA-256; it verifies
+  that hash (and the AES-GCM tag) on download.
+
+### End-to-end encryption
+
+Each device has an HPKE key pair (`crypto/DeviceKeys.kt`, Tink, private
+half in credential-protected storage wrapped by an Android Keystore key);
+the public half is published via `PUT /v1/me/public-key` and handed to
+contacts in `GET /v1/pairings` (`other_public_key`).
+
+- Uploads are encrypted on the phone with a random per-upload key
+  (`MediaCrypto`, "WLE1" + AES-256-GCM); the server stores ciphertext only
+  and the key stays in `MediaKeyStore`. Losing it (reinstall) makes that
+  upload unusable on this phone.
+- `WakeComposer` seals the sender's name, sound, picture and their content
+  keys to the recipient's key (`SealedWake`) and sends only `sealed`; the
+  server relays it in the push without being able to read it, and the push
+  then carries no plaintext name/sound/image. Contacts whose app has no key
+  get a plain wake with none of the extras.
+- Known limit: keys are distributed by the server (trust on first use), so
+  a malicious server could substitute one; there is no key verification UI.
+
+### Readiness
+
+`status/SetupScreen.kt` is the "get ready" checklist (notifications,
+full-screen alarms, battery optimization, a Samsung sleeping-apps pointer).
+MainActivity opens it after registering and on any launch where
+`DeviceReadiness.allReady` is false; `ContactsScreen` additionally pops a
+dialog when a problem appears while the app is in use. Prefer dialogs and
+screens over banners for anything that would make a wake fail.
+
 ### Pairing / consent model (`docs/pairing-flow.md` has the full sequence)
 
 Symmetric, mutual-consent, N:N -- not a fixed sender/receiver pair. One
@@ -207,7 +281,8 @@ must remove children first, in a transaction (`DeletePairing`,
 `Sender` interface with a real Firebase Admin SDK implementation and a
 `MockSender` (used when `FCM_MOCK=true` and in `api_test.go`) so tests
 never need real credentials or network access. `server/internal/api`
-holds all HTTP handlers plus the bearer-token auth middleware
+holds all HTTP handlers (uploads in `media.go`: one generic set of
+handlers per `mediaCategory`, sounds and images) plus the bearer-token auth middleware
 (`requireAuth` in `middleware.go`, resolves `Authorization: Bearer
 <key>` by SHA-256 hash lookup -- raw keys are never stored).
 `server/internal/ratelimit` re-derives cooldown/daily-cap state from the

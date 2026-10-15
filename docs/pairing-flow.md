@@ -49,3 +49,14 @@ Notes:
 - Nothing here lets one side see the other's location, messages, contacts,
   or any data beyond: display name, whether they can currently wake you,
   and the timestamps of past triggers.
+- A wake can carry a sound and a picture the sender picked (built-in
+  sounds, a short voice recording, an audio file, a photo or GIF). The
+  receiver decides what to honor: "sounds chosen by others" can be limited
+  to built-in ones or turned off, and pictures can be hidden.
+- When both apps support it, the wake's details (sender name, chosen sound
+  and picture, and the keys for those uploads) are end-to-end encrypted to
+  the receiver's device key, and uploads are encrypted on the sender's
+  phone before they reach the server. The server stores and relays only
+  ciphertext for those; it still knows who paired with whom and when wakes
+  were sent. Uploads can only be downloaded by their owner and by people
+  the owner may currently wake, and are deleted with the account.

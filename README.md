@@ -26,6 +26,10 @@ Forgot to set an alarm? Someone you trust can still wake you up.
 - **Rings through silent and vibrate mode**, with no special permission
 - **Tells the sender whether it actually rang**, not just that it was sent
 - **Only people who both agreed can connect**, and either side can stop it anytime
+- **Your sound, your picture**: pick a built-in sound, record your voice or send an audio file, and attach a photo or GIF (even one you take on the spot) to show on their alarm screen
+- **End-to-end encrypted**: names, recordings, files and pictures are encrypted for the receiver's phone; the server only relays ciphertext
+- **The receiver stays in control** of volume (with an optional gradual rise), which sounds others may choose, and whether pictures show
+- **Rings even before the first unlock** after a reboot, e.g. an overnight auto-restart
 - **One app for everyone**: every install can wake others and be woken
 - **English and Korean**, following your phone's language
 
@@ -34,7 +38,7 @@ Forgot to set an alarm? Someone you trust can still wake you up.
 1. Download the APK from **<https://wake.seolcu.com/download>** (it always points to the [latest release](https://github.com/seolcu/wakelink/releases/latest)).
 2. Open it. WakeLink isn't on the Play Store, so the first time Android asks you to allow installing apps from your browser or file manager.
 3. Pick a name and swap an invite code with the person who'll wake you.
-4. Check **Settings → Device readiness** and fix any warnings, so it rings reliably while you sleep.
+4. The app walks you through the permissions a wake needs (notifications, full-screen alarm, battery optimization), so it rings reliably while you sleep.
 
 After that the app keeps itself up to date: it checks for a new release whenever it opens (or under **Settings → App updates**), downloads it, and opens the installer. You just confirm.
 
@@ -55,6 +59,7 @@ Android's silent mode mutes ringtones and notification sounds, but **not the ala
 - **Always revocable**: turn the app off, block one person, or disconnect entirely, anytime.
 - **Never hidden**: while people can wake you, a persistent notification says so.
 - **No spamming**: one wake-up per person every 30 seconds, at most 20 per 24 hours.
+- **Private by design**: wake details and uploads are end-to-end encrypted when both apps support it; uploads can only be fetched by people the uploader may wake, and are deleted with the account.
 
 ## How a wake-up travels
 

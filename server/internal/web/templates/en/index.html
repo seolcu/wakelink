@@ -94,12 +94,34 @@
     </div>
   </section>
 
+  <section class="section">
+    <div class="wrap">
+      <h2>Wake them your way</h2>
+      <p class="section-lead">The same alarm tone every morning gets old. The sender picks what plays and what shows; the receiver decides what's allowed.</p>
+      <div class="features">
+        <div class="feature">
+          <h3>Six built-in sounds</h3>
+          <p>Classic beep, digital, chime, rising, bell and marimba. Preview them before you pick.</p>
+        </div>
+        <div class="feature">
+          <h3>Your voice, your music</h3>
+          <p>Record up to 15 seconds of "Wake up!", or send an audio file from your phone.</p>
+        </div>
+        <div class="feature">
+          <h3>A picture on their alarm</h3>
+          <p>Show a photo or an animated GIF on their alarm screen. You can even snap one with the camera right then.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="section section-alt">
     <div class="wrap split">
       <div>
         <h2>Why it rings even on silent</h2>
         <p>Your clock app's alarm still goes off when your phone is on silent. That's because silent mode only mutes ringtones and notification sounds, <b>not the alarm volume</b>.</p>
         <p>WakeLink rings on that same alarm channel, so it gets through silent and vibrate mode without any special permission.</p>
+        <p>A phone whose alarm volume is turned way down still works: while ringing, WakeLink uses the volume the receiver chose, then puts theirs back.</p>
         <p class="muted">Do Not Disturb's "Total silence" mutes alarms too. If you want WakeLink to get through that as well, you can turn it on in settings. It's changed only while ringing and put back afterwards.</p>
       </div>
       <ul class="mode-list" aria-label="What happens in each mode">
@@ -138,8 +160,8 @@
           <p>One wake-up per person every 30 seconds, and at most 20 in 24 hours.</p>
         </div>
         <div class="feature">
-          <h3>Minimal data</h3>
-          <p>The server stores only your display name and a push notification token. Deleting your account deletes your activity too.</p>
+          <h3>End-to-end encrypted</h3>
+          <p>Your name, recordings, files and pictures are encrypted so only the receiver's phone can open them. The server only relays ciphertext, and deleting your account deletes it all.</p>
         </div>
       </div>
     </div>
@@ -166,7 +188,15 @@
       </details>
       <details class="faq">
         <summary>What if battery saving stops it from ringing?</summary>
-        <p>Settings → Device readiness checks notifications, the full-screen lock screen alarm and battery optimization. With no warnings there, wake-ups arrive right away even while your phone sleeps.</p>
+        <p>The first time you open the app it walks you through notifications, the full-screen lock screen alarm and battery optimization, and it tells you again if one gets turned off later. On Samsung phones, also keep WakeLink off the "Sleeping apps" list.</p>
+      </details>
+      <details class="faq">
+        <summary>Who can see the pictures and recordings I send?</summary>
+        <p>Only the people you wake. They're encrypted on your phone before upload, and the key travels to the receiver sealed so only their phone can open it. Neither the server nor Google, which delivers the push, can see the content. Deleting your account deletes them from the server.</p>
+      </details>
+      <details class="faq">
+        <summary>Does it ring after a reboot, before I unlock?</summary>
+        <p>Yes, so an overnight auto-restart doesn't cost you the morning. Encrypted details can't be opened until the first unlock, though, so it rings with your own sound instead of the sender's name, sound and picture.</p>
       </details>
       <details class="faq">
         <summary>What if their phone is off when I send a wake-up?</summary>
