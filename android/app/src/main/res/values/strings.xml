@@ -7,6 +7,7 @@
     <string name="alarm_stop_action">Stop</string>
     <string name="unknown_sender">Someone</string>
     <string name="common_cancel">Cancel</string>
+    <string name="common_done">Done</string>
     <string name="common_back">Back</string>
     <string name="common_loading">Loading…</string>
     <string name="common_settings">Settings</string>
@@ -197,7 +198,8 @@
     <string name="sounds_name_label">Name</string>
     <string name="sounds_save">Save</string>
     <string name="settings_volume">WakeLink alarm volume: %1$d%%</string>
-    <string name="settings_volume_hint">Used while ringing, whatever your phone\'s alarm volume is. Let go of the slider to hear it.</string>
+    <string name="settings_volume_hint">Used while ringing, whatever your phone\'s alarm volume is</string>
+    <string name="settings_volume_preview_hint">Plays a short preview when you let go of the slider</string>
     <string name="settings_crescendo">Gradually louder</string>
     <string name="settings_crescendo_hint">Starts quiet and reaches full volume in about 30 seconds</string>
     <string name="settings_default_sound">My alarm sound</string>

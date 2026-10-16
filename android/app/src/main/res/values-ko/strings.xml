@@ -5,6 +5,7 @@
     <string name="alarm_stop_action">중지</string>
     <string name="unknown_sender">누군가</string>
     <string name="common_cancel">취소</string>
+    <string name="common_done">완료</string>
     <string name="common_back">뒤로</string>
     <string name="common_loading">불러오는 중…</string>
     <string name="common_settings">설정</string>
@@ -194,7 +195,8 @@
     <string name="sounds_name_label">이름</string>
     <string name="sounds_save">저장</string>
     <string name="settings_volume">WakeLink 알람 볼륨: %1$d%%</string>
-    <string name="settings_volume_hint">폰 알람 볼륨과 상관없이 울릴 때 쓰는 볼륨 · 손을 떼면 미리 듣기</string>
+    <string name="settings_volume_hint">폰 알람 볼륨과 상관없이 울릴 때 쓰는 볼륨</string>
+    <string name="settings_volume_preview_hint">슬라이더에서 손을 떼면 잠깐 미리 들려줘요.</string>
     <string name="settings_crescendo">점점 커지게</string>
     <string name="settings_crescendo_hint">작게 시작해 30초쯤 뒤 설정한 볼륨까지</string>
     <string name="settings_default_sound">내 알람 소리</string>
