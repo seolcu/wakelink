@@ -122,6 +122,7 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
     var pickingTheme by remember { mutableStateOf(false) }
     var pickingDefaultSound by remember { mutableStateOf(false) }
     var pickingPolicy by remember { mutableStateOf(false) }
+    var editingVolume by remember { mutableStateOf(false) }
     var dndAccessGranted by remember { mutableStateOf(false) }
     var readiness by remember { mutableStateOf<DeviceReadiness?>(null) }
 
@@ -267,17 +268,9 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                     icon = Icons.AutoMirrored.Rounded.VolumeUp,
                     title = stringResource(R.string.settings_volume, volumePercent),
                     supporting = stringResource(R.string.settings_volume_hint),
-                )
-                Slider(
-                    value = volumePercent.toFloat(),
-                    onValueChange = { volumePercent = it.roundToInt() },
-                    onValueChangeFinished = {
-                        scope.launch { settings.setVolumePercent(volumePercent) }
-                        SoundPreview.play(context, parseSoundRef(defaultSound) ?: SoundRef.Device, volumePercent)
-                    },
-                    valueRange = SettingsRepository.MIN_VOLUME_PERCENT.toFloat()..100f,
-                    steps = (100 - SettingsRepository.MIN_VOLUME_PERCENT) / 10 - 1,
-                    modifier = Modifier.padding(horizontal = 24.dp),
+                    // The slider lives in a dialog, not inline: brushing it
+                    // while scrolling would blast a preview at full volume.
+                    onClick = { editingVolume = true },
                 )
                 SettingsRow(
                     icon = Icons.AutoMirrored.Rounded.TrendingUp,
@@ -457,6 +450,38 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                 scope.launch { settings.setDefaultSound(chosen) }
             },
             onDismiss = { pickingDefaultSound = false },
+        )
+    }
+
+    if (editingVolume) {
+        val closeVolume = {
+            SoundPreview.stop()
+            editingVolume = false
+        }
+        AlertDialog(
+            onDismissRequest = closeVolume,
+            icon = { Icon(Icons.AutoMirrored.Rounded.VolumeUp, contentDescription = null) },
+            title = { Text(stringResource(R.string.settings_volume, volumePercent)) },
+            text = {
+                Column {
+                    Slider(
+                        value = volumePercent.toFloat(),
+                        onValueChange = { volumePercent = it.roundToInt() },
+                        onValueChangeFinished = {
+                            scope.launch { settings.setVolumePercent(volumePercent) }
+                            SoundPreview.play(context, parseSoundRef(defaultSound) ?: SoundRef.Device, volumePercent)
+                        },
+                        valueRange = SettingsRepository.MIN_VOLUME_PERCENT.toFloat()..100f,
+                        steps = (100 - SettingsRepository.MIN_VOLUME_PERCENT) / 10 - 1,
+                    )
+                    Text(
+                        stringResource(R.string.settings_volume_preview_hint),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
+            confirmButton = { TextButton(onClick = closeVolume) { Text(stringResource(R.string.common_done)) } },
         )
     }
 
