@@ -124,6 +124,22 @@ a one-time "new version" notification, for people who rarely open the app. Alway
 same key -- Android rejects an update signed differently, and a debug
 build can't be updated to a release build (uninstall first).
 
+The gitignored release secrets are kept in the maintainer's Proton Drive
+under `/my-files/wakelink-secrets/`, laid out at the same paths as in the
+repo: `android/app/google-services.json`,
+`android/keystore/wakelink-upload.{jks,properties}` and
+`server/secrets/firebase-service-account.json` (the last is only for
+real-FCM testing, not releases). To release from another machine, from
+the repo root:
+
+```bash
+proton-drive auth login
+proton-drive fs download -d merge -f replace /my-files/wakelink-secrets/android /my-files/wakelink-secrets/server .
+```
+
+If the keystore or Firebase config ever changes, upload the new copy
+there too (`proton-drive fs upload -f replace <file> <drive folder>`).
+
 ### CI
 
 `.github/workflows/backend.yml` and `android.yml` run on every push
