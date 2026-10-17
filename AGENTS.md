@@ -134,7 +134,7 @@ the repo root:
 
 ```bash
 proton-drive auth login
-proton-drive fs download -d merge -f replace /my-files/wakelink-secrets/android /my-files/wakelink-secrets/server .
+proton-drive fs download -d merge -f remove /my-files/wakelink-secrets/android /my-files/wakelink-secrets/server .
 ```
 
 If the keystore or Firebase config ever changes, upload the new copy
