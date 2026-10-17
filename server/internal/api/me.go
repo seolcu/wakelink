@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/base64"
 	"net/http"
+	"time"
 
 	"wakelink/internal/auth"
 )
@@ -15,7 +16,7 @@ type meView struct {
 
 func (s *Server) handleGetMe(w http.ResponseWriter, r *http.Request) {
 	user := userFromContext(r)
-	writeJSON(w, http.StatusOK, meView{UserID: user.ID, DisplayName: user.DisplayName, AcceptingWakes: user.AcceptingWakes})
+	writeJSON(w, http.StatusOK, meView{UserID: user.ID, DisplayName: user.DisplayName, AcceptingWakes: user.AcceptsWakesAt(time.Now().Unix())})
 }
 
 type patchMeRequest struct {
@@ -41,7 +42,7 @@ func (s *Server) handlePatchMe(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to update display name")
 		return
 	}
-	writeJSON(w, http.StatusOK, meView{UserID: user.ID, DisplayName: name, AcceptingWakes: user.AcceptingWakes})
+	writeJSON(w, http.StatusOK, meView{UserID: user.ID, DisplayName: name, AcceptingWakes: user.AcceptsWakesAt(time.Now().Unix())})
 }
 
 // handleDeleteMe permanently deletes the caller's account: every pairing
@@ -104,7 +105,13 @@ func (s *Server) handlePutPublicKey(w http.ResponseWriter, r *http.Request) {
 
 type acceptingRequest struct {
 	Accepting *bool `json:"accepting"`
+	// ResumeAt (unix seconds) turns switching off into a pause that ends
+	// by itself, so a forgotten switch doesn't leave the person unwakeable.
+	ResumeAt *int64 `json:"resume_at,omitempty"`
 }
+
+// maxPause bounds a temporary pause; longer means "switched off".
+const maxPause = 7 * 24 * time.Hour
 
 // handlePutAccepting mirrors the app's "receiving wake-ups" switch, so
 // contacts see it and wakes are refused up front while it's off.
@@ -115,7 +122,17 @@ func (s *Server) handlePutAccepting(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "accepting is required")
 		return
 	}
-	if err := s.DB.SetAcceptingWakes(r.Context(), user.ID, *req.Accepting); err != nil {
+	resumeAt := req.ResumeAt
+	if *req.Accepting {
+		resumeAt = nil
+	} else if resumeAt != nil {
+		now := time.Now()
+		if *resumeAt <= now.Unix() || *resumeAt > now.Add(maxPause).Unix() {
+			writeError(w, http.StatusBadRequest, "resume_at must be in the next 7 days")
+			return
+		}
+	}
+	if err := s.DB.SetAcceptingWakes(r.Context(), user.ID, *req.Accepting, resumeAt); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to update")
 		return
 	}

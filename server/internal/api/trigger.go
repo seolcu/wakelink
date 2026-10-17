@@ -118,7 +118,7 @@ func (s *Server) handleTrigger(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
-	if !recipient.AcceptingWakes || !pairing.Accepts(user.ID, otherID) {
+	if !recipient.AcceptsWakesAt(time.Now().Unix()) || !pairing.Accepts(user.ID, otherID) {
 		// Switched off entirely, or just for this sender. Same answer either
 		// way, so the sender can't tell which; and it's said now rather than
 		// letting the sender wait for an ack that never comes.

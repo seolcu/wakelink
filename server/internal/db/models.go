@@ -11,6 +11,15 @@ type User struct {
 	PublicKey   sql.NullString
 	// AcceptingWakes mirrors the app's "receiving wake-ups" switch.
 	AcceptingWakes bool
+	// AcceptingResumesAt, when set, ends a switched-off period on its own
+	// (a temporary pause); see AcceptsWakesAt.
+	AcceptingResumesAt sql.NullInt64
+}
+
+// AcceptsWakesAt reports whether the user takes wakes at unix time now:
+// switched on, or switched off only until a resume time that has passed.
+func (u *User) AcceptsWakesAt(now int64) bool {
+	return u.AcceptingWakes || (u.AcceptingResumesAt.Valid && now >= u.AcceptingResumesAt.Int64)
 }
 
 type Invite struct {

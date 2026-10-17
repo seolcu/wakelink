@@ -732,6 +732,47 @@ func TestWakesRefusedWhileRecipientIsNotAccepting(t *testing.T) {
 	}
 }
 
+func TestTemporaryPauseEndsByItself(t *testing.T) {
+	s, _ := newTestServer(t)
+	s.RateLimit.Cooldown = 0
+	router := s.Router()
+	alice, bob, pairingID := pairUp(t, router)
+
+	for _, bad := range []int64{time.Now().Unix() - 10, time.Now().Add(8 * 24 * time.Hour).Unix()} {
+		body := map[string]any{"accepting": false, "resume_at": bad}
+		if rec := doJSON(t, router, http.MethodPut, "/v1/me/accepting", alice.APIKey, body); rec.Code != http.StatusBadRequest {
+			t.Fatalf("resume_at %d: expected 400, got %d", bad, rec.Code)
+		}
+	}
+
+	body := map[string]any{"accepting": false, "resume_at": time.Now().Add(time.Hour).Unix()}
+	if rec := doJSON(t, router, http.MethodPut, "/v1/me/accepting", alice.APIKey, body); rec.Code != http.StatusNoContent {
+		t.Fatalf("pause: status %d", rec.Code)
+	}
+	if rec := doJSON(t, router, http.MethodPost, pairingPath(pairingID)+"/trigger", bob.APIKey, nil); rec.Code != http.StatusConflict {
+		t.Fatalf("while paused: expected 409, got %d", rec.Code)
+	}
+
+	// The pause runs out without Alice's phone ever saying so.
+	past := time.Now().Unix() - 1
+	if _, err := s.DB.ExecContext(context.Background(), `UPDATE users SET accepting_resumes_at = ? WHERE id = ?`, past, alice.UserID); err != nil {
+		t.Fatal(err)
+	}
+	if got := listPairings(t, router, bob.APIKey); !got[0].TheyAcceptWakes {
+		t.Fatalf("Bob should see Alice accepting once the pause ended")
+	}
+	if rec := doJSON(t, router, http.MethodPost, pairingPath(pairingID)+"/trigger", bob.APIKey, nil); rec.Code != http.StatusCreated {
+		t.Fatalf("after the pause: status %d", rec.Code)
+	}
+
+	// Switching on clears the timer; switching off without one is indefinite.
+	doJSON(t, router, http.MethodPut, "/v1/me/accepting", alice.APIKey, map[string]bool{"accepting": true})
+	doJSON(t, router, http.MethodPut, "/v1/me/accepting", alice.APIKey, map[string]bool{"accepting": false})
+	if got := listPairings(t, router, bob.APIKey); got[0].TheyAcceptWakes {
+		t.Fatalf("switched off with no timer should stay off")
+	}
+}
+
 func TestReceiverCanRefuseOneContact(t *testing.T) {
 	s, sender := newTestServer(t)
 	s.RateLimit.Cooldown = 0

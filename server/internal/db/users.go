@@ -27,7 +27,7 @@ func (d *DB) CreateUser(ctx context.Context, displayName, apiKeyHash string) (*U
 
 func (d *DB) GetUserByAPIKeyHash(ctx context.Context, hash string) (*User, error) {
 	row := d.QueryRowContext(ctx,
-		`SELECT id, display_name, fcm_token, api_key_hash, created_at, public_key, accepting_wakes FROM users WHERE api_key_hash = ?`,
+		`SELECT id, display_name, fcm_token, api_key_hash, created_at, public_key, accepting_wakes, accepting_resumes_at FROM users WHERE api_key_hash = ?`,
 		hash,
 	)
 	return scanUser(row)
@@ -35,7 +35,7 @@ func (d *DB) GetUserByAPIKeyHash(ctx context.Context, hash string) (*User, error
 
 func (d *DB) GetUserByID(ctx context.Context, id int64) (*User, error) {
 	row := d.QueryRowContext(ctx,
-		`SELECT id, display_name, fcm_token, api_key_hash, created_at, public_key, accepting_wakes FROM users WHERE id = ?`,
+		`SELECT id, display_name, fcm_token, api_key_hash, created_at, public_key, accepting_wakes, accepting_resumes_at FROM users WHERE id = ?`,
 		id,
 	)
 	return scanUser(row)
@@ -43,7 +43,7 @@ func (d *DB) GetUserByID(ctx context.Context, id int64) (*User, error) {
 
 func scanUser(row *sql.Row) (*User, error) {
 	var u User
-	if err := row.Scan(&u.ID, &u.DisplayName, &u.FCMToken, &u.APIKeyHash, &u.CreatedAt, &u.PublicKey, &u.AcceptingWakes); err != nil {
+	if err := row.Scan(&u.ID, &u.DisplayName, &u.FCMToken, &u.APIKeyHash, &u.CreatedAt, &u.PublicKey, &u.AcceptingWakes, &u.AcceptingResumesAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -72,9 +72,11 @@ func (d *DB) SetPublicKey(ctx context.Context, userID int64, publicKey string) e
 	return err
 }
 
-// SetAcceptingWakes records whether userID currently accepts wakes.
-func (d *DB) SetAcceptingWakes(ctx context.Context, userID int64, accepting bool) error {
-	_, err := d.ExecContext(ctx, `UPDATE users SET accepting_wakes = ? WHERE id = ?`, accepting, userID)
+// SetAcceptingWakes records whether userID currently accepts wakes, and
+// for a temporary pause (accepting false), when that pause ends on its own
+// (unix seconds; nil = until switched back on).
+func (d *DB) SetAcceptingWakes(ctx context.Context, userID int64, accepting bool, resumesAt *int64) error {
+	_, err := d.ExecContext(ctx, `UPDATE users SET accepting_wakes = ?, accepting_resumes_at = ? WHERE id = ?`, accepting, resumesAt, userID)
 	return err
 }
 

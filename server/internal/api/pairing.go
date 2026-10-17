@@ -164,6 +164,7 @@ func (s *Server) handleListPairings(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	now := time.Now().Unix()
 	pairings, err := s.DB.ListPairingsForUser(r.Context(), user.ID, limit)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to list pairings")
@@ -184,7 +185,7 @@ func (s *Server) handleListPairings(w http.ResponseWriter, r *http.Request) {
 			ID:              p.ID,
 			OtherUserName:   other.DisplayName,
 			CreatedAt:       p.CreatedAt,
-			TheyAcceptWakes: other.AcceptingWakes && p.Accepts(user.ID, other.ID),
+			TheyAcceptWakes: other.AcceptsWakesAt(now) && p.Accepts(user.ID, other.ID),
 			IAcceptFromThem: p.Accepts(other.ID, user.ID),
 		}
 		if other.PublicKey.Valid {
