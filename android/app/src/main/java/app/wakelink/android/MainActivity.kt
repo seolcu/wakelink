@@ -35,6 +35,7 @@ import app.wakelink.android.contacts.ContactsScreen
 import app.wakelink.android.data.SettingsRepository
 import app.wakelink.android.data.ThemeMode
 import app.wakelink.android.data.TokenStore
+import app.wakelink.android.inbox.InboxScreen
 import app.wakelink.android.pairing.PairingScreen
 import app.wakelink.android.pairing.RegisterScreen
 import app.wakelink.android.pairing.parseInviteCode
@@ -61,6 +62,9 @@ class MainActivity : ComponentActivity() {
     /** Opened from the "new version available" notification: show the update dialog right away. */
     private var updateRequested by mutableStateOf(false)
 
+    /** Opened from a wake's message notification: show the received messages. */
+    private var inboxRequested by mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Edge-to-edge is forced at targetSdk 35 anyway; this also picks
         // status-bar icon colors that contrast with the light/dark background.
@@ -71,6 +75,7 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) {
             pendingInviteCode = parseInviteCode(intent?.dataString)
             updateRequested = intent?.getBooleanExtra(EXTRA_SHOW_UPDATE, false) == true
+            inboxRequested = intent?.getBooleanExtra(EXTRA_OPEN_INBOX, false) == true
         }
 
         setContent {
@@ -120,6 +125,15 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                    LaunchedEffect(inboxRequested, currentRoute) {
+                        if (!inboxRequested || currentRoute == null || currentRoute == "register" || currentRoute == "setup") return@LaunchedEffect
+                        inboxRequested = false
+                        navController.navigate("inbox") {
+                            popUpTo("contacts")
+                            launchSingleTop = true
+                        }
+                    }
+
                     // targetSdk 35 forces edge-to-edge drawing: keep every screen
                     // clear of the status/navigation bars and the keyboard.
                     NavHost(
@@ -142,6 +156,7 @@ class MainActivity : ComponentActivity() {
                                 onOpenPairing = { navController.navigate("pairing") },
                                 onOpenSettings = { navController.navigate("settings") },
                                 onOpenSetup = { navController.navigate("setup") },
+                                onOpenInbox = { navController.navigate("inbox") },
                                 onAccountLost = {
                                     navController.navigate("register") {
                                         popUpTo(navController.graph.id) { inclusive = true }
@@ -157,6 +172,9 @@ class MainActivity : ComponentActivity() {
                                 initialCode = entry.arguments?.getString("code"),
                                 onDone = { navController.popBackStack() },
                             )
+                        }
+                        composable("inbox") {
+                            InboxScreen(onDone = { navController.popBackStack() })
                         }
                         composable("settings") {
                             SettingsScreen(
@@ -178,6 +196,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         parseInviteCode(intent.dataString)?.let { pendingInviteCode = it }
         if (intent.getBooleanExtra(EXTRA_SHOW_UPDATE, false)) updateRequested = true
+        if (intent.getBooleanExtra(EXTRA_OPEN_INBOX, false)) inboxRequested = true
     }
 
     /**
@@ -217,6 +236,7 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_SHOW_UPDATE = "show_update"
+        const val EXTRA_OPEN_INBOX = "open_inbox"
     }
 }
 

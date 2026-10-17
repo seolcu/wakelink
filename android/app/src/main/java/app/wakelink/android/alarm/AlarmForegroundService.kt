@@ -22,7 +22,10 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import app.wakelink.android.R
 import app.wakelink.android.WakeLinkApplication
+import app.wakelink.android.data.ReceivedWake
+import app.wakelink.android.data.ReceivedWakes
 import app.wakelink.android.data.SettingsRepository
+import app.wakelink.android.inbox.WakeMessageNotifier
 import app.wakelink.android.crypto.fromB64
 import app.wakelink.android.sounds.ImageCache
 import app.wakelink.android.sounds.SoundCache
@@ -105,6 +108,9 @@ class AlarmForegroundService : Service() {
         _ringingFrom.value = fromDisplayName
         _ringingMessage.value = message // the newest wake's, like the name
         if (triggerId >= 0) synchronized(ringingTriggers) { ringingTriggers += triggerId }
+        if (triggerId >= 0 && (message != null || requestedImage != null)) {
+            keepForLater(triggerId, fromDisplayName, message, intent?.getStringExtra(EXTRA_IMAGE), intent?.getStringExtra(EXTRA_IMAGE_KEY))
+        }
 
         if (alreadyActive) {
             // A second wake while one is already ringing (or starting):
@@ -321,6 +327,34 @@ class AlarmForegroundService : Service() {
         vibrator = v
     }
 
+    /**
+     * Saves a wake's message/picture to the received list, so it can still be
+     * seen once the alarm screen is gone; [releaseOutputs] then leaves it in
+     * a notification too.
+     */
+    private fun keepForLater(triggerId: Long, from: String, message: String?, image: String?, imageKey: String?) {
+        // Process-wide scope: this must finish even if the alarm stops at once.
+        (application as WakeLinkApplication).appScope.launch {
+            val settings = SettingsRepository(applicationContext)
+            if (!settings.armed.first()) return@launch // it never rang
+            val shownImage = image.takeIf { settings.showImages.first() }
+            if (message == null && shownImage == null) return@launch
+            val wake = ReceivedWake(triggerId, from, message, shownImage, imageKey?.takeIf { shownImage != null }, System.currentTimeMillis())
+            ReceivedWakes(applicationContext).add(wake)
+            synchronized(heldWakes) { heldWakes += wake }
+            // Already stopped by the time this was saved: notify right away.
+            if (_ringingFrom.value == null) notifyHeldWakes()
+        }
+    }
+
+    private fun notifyHeldWakes() {
+        val held = synchronized(heldWakes) { heldWakes.toList().also { heldWakes.clear() } }
+        if (held.isEmpty()) return
+        (application as WakeLinkApplication).appScope.launch {
+            held.forEach { WakeMessageNotifier.post(applicationContext, it) }
+        }
+    }
+
     private fun ackTrigger(triggerId: Long) {
         // Process-wide scope: the ack must outlive this service if the user
         // stops the alarm right away.
@@ -366,6 +400,7 @@ class AlarmForegroundService : Service() {
         }
         _ringingFrom.value = null
         takeRingingTriggers()
+        notifyHeldWakes()
     }
 
     private fun stopRinging() {
@@ -416,6 +451,9 @@ class AlarmForegroundService : Service() {
 
         /** Wakes behind the current ring, process-wide so a fresh instance handling ACTION_STOP sees them. */
         private val ringingTriggers = mutableSetOf<Long>()
+
+        /** Wakes behind the current ring that brought a message or picture, notified once it ends. */
+        private val heldWakes = mutableListOf<ReceivedWake>()
 
         private fun takeRingingTriggers(): List<Long> = synchronized(ringingTriggers) {
             ringingTriggers.toList().also { ringingTriggers.clear() }

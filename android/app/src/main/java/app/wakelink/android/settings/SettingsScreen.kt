@@ -86,6 +86,9 @@ import app.wakelink.android.sounds.SoundRef
 import app.wakelink.android.sounds.parseSoundRef
 import app.wakelink.android.sounds.soundLabel
 import app.wakelink.android.status.DeviceReadiness
+import app.wakelink.android.status.PauseWakeDialog
+import app.wakelink.android.status.armedSupportingText
+import app.wakelink.android.status.rememberArmedState
 import app.wakelink.android.ui.OnResume
 import app.wakelink.android.ui.components.Avatar
 import app.wakelink.android.ui.components.SectionCard
@@ -110,7 +113,8 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
     val tokenStore = remember { TokenStore(context) }
     val api = remember { ApiClient.create(tokenStore) }
 
-    var armed by remember { mutableStateOf(true) }
+    val armedState = rememberArmedState()
+    var choosingPause by remember { mutableStateOf(false) }
     var dndBypass by remember { mutableStateOf(false) }
     var dismissMode by remember { mutableStateOf(DismissMode.UNLOCK_REQUIRED) }
     var volumePercent by remember { mutableIntStateOf(SettingsRepository.DEFAULT_VOLUME_PERCENT) }
@@ -139,7 +143,6 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
     var availableUpdate by remember { mutableStateOf<UpdateInfo?>(null) }
 
     LaunchedEffect(Unit) {
-        armed = settings.armed.first()
         dndBypass = settings.dndBypassEnabled.first()
         dismissMode = settings.dismissMode.first()
         volumePercent = settings.volumePercent.first()
@@ -226,11 +229,10 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                 SettingsRow(
                     icon = Icons.Rounded.PowerSettingsNew,
                     title = stringResource(R.string.settings_armed),
-                    supporting = stringResource(if (armed) R.string.settings_armed_on else R.string.settings_armed_off),
+                    supporting = armedSupportingText(armedState),
                     trailing = {
-                        Switch(checked = armed, onCheckedChange = { value ->
-                            armed = value
-                            scope.launch { ArmedSync.set(context, value) }
+                        Switch(checked = armedState.armed, onCheckedChange = { value ->
+                            if (value) scope.launch { ArmedSync.set(context, true) } else choosingPause = true
                         })
                     },
                 )
@@ -541,6 +543,16 @@ fun SettingsScreen(onDone: () -> Unit, onAccountDeleted: () -> Unit) {
                 }) { Text(stringResource(R.string.settings_rotate_confirm)) }
             },
             dismissButton = { TextButton(onClick = { confirmRotateKey = false }) { Text(stringResource(R.string.common_cancel)) } },
+        )
+    }
+
+    if (choosingPause) {
+        PauseWakeDialog(
+            onPause = { resumeAt ->
+                choosingPause = false
+                scope.launch { ArmedSync.set(context, false, resumeAt) }
+            },
+            onDismiss = { choosingPause = false },
         )
     }
 

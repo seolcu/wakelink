@@ -60,6 +60,7 @@ class SettingsRepository(context: Context) {
 
     private object Keys {
         const val ARMED = "armed"
+        const val ARMED_RESUME_AT = "armed_resume_at"
         const val DND_BYPASS_ENABLED = "dnd_bypass_enabled"
         const val DISMISS_MODE = "dismiss_mode"
         const val VOLUME_PERCENT = "volume_percent"
@@ -91,7 +92,15 @@ class SettingsRepository(context: Context) {
         prefs.edit().apply(block).commit()
     }
 
-    val armed: Flow<Boolean> = observe { it.getBoolean(Keys.ARMED, true) }
+    /**
+     * Whether wakes ring right now: switched on, or switched off only for a
+     * pause that has run out (even if [ArmedSync.resumeIfDue] hasn't caught
+     * up yet -- the alarm path must not depend on that timer firing on time).
+     */
+    val armed: Flow<Boolean> = observe { isArmedAt(it.getBoolean(Keys.ARMED, true), readResumeAt(it), System.currentTimeMillis()) }
+
+    /** When a temporary pause ends (epoch millis), or null when on or off indefinitely. */
+    val armedResumeAt: Flow<Long?> = observe { if (it.getBoolean(Keys.ARMED, true)) null else readResumeAt(it) }
     val dndBypassEnabled: Flow<Boolean> = observe { it.getBoolean(Keys.DND_BYPASS_ENABLED, false) }
     val dismissMode: Flow<DismissMode> = observe { readDismissMode(it) }
 
@@ -120,7 +129,11 @@ class SettingsRepository(context: Context) {
     /** Version the user chose "skip" for in the startup update prompt; manual checks ignore it. */
     val skippedUpdateVersion: Flow<String?> = observe { it.getString(Keys.SKIPPED_UPDATE_VERSION, null) }
 
-    suspend fun setArmed(value: Boolean) = edit { putBoolean(Keys.ARMED, value) }
+    /** [resumeAt] (epoch millis) makes switching off a pause that ends by itself. */
+    suspend fun setArmed(value: Boolean, resumeAt: Long? = null) = edit {
+        putBoolean(Keys.ARMED, value)
+        if (!value && resumeAt != null) putLong(Keys.ARMED_RESUME_AT, resumeAt) else remove(Keys.ARMED_RESUME_AT)
+    }
     suspend fun setDndBypassEnabled(value: Boolean) = edit { putBoolean(Keys.DND_BYPASS_ENABLED, value) }
     suspend fun setDismissMode(value: DismissMode) = edit { putString(Keys.DISMISS_MODE, value.name) }
     suspend fun setVolumePercent(value: Int) =
@@ -220,6 +233,9 @@ class SettingsRepository(context: Context) {
             putBoolean(Keys.LEGACY_MIGRATED, true)
         }
     }
+
+    private fun readResumeAt(p: SharedPreferences): Long? =
+        if (p.contains(Keys.ARMED_RESUME_AT)) p.getLong(Keys.ARMED_RESUME_AT, 0) else null
 
     private fun readDismissMode(p: SharedPreferences): DismissMode = when (p.getString(Keys.DISMISS_MODE, null)) {
         DismissMode.TAP_TO_DISMISS.name -> DismissMode.TAP_TO_DISMISS

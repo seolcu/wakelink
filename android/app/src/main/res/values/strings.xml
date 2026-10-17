@@ -269,4 +269,23 @@
     <string name="contacts_accept_from_off">Stop receiving wake-ups from %1$s</string>
     <string name="contacts_accept_from_on">Receive wake-ups from %1$s again</string>
     <string name="contacts_not_accepting_from">You\'re not receiving wake-ups from %1$s</string>
+    <string name="armed_pause_title">Turn off wake-ups for</string>
+    <string name="armed_pause_body">They come back on by themselves, so you won\'t forget.</string>
+    <plurals name="armed_pause_hours">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
+    </plurals>
+    <string name="armed_pause_forever">Until I turn them back on</string>
+    <string name="armed_resumes_today">Back on at %1$s</string>
+    <string name="armed_resumes_tomorrow">Back on tomorrow at %1$s</string>
+    <string name="armed_resumes_later">Back on %1$s</string>
+    <string name="inbox_title">Received messages</string>
+    <string name="inbox_empty">Messages and pictures sent with wake-ups stay here, so you can see them after the alarm stops.</string>
+    <string name="inbox_clear">Clear all</string>
+    <string name="inbox_clear_title">Clear all received messages?</string>
+    <string name="inbox_delete">Delete</string>
+    <string name="inbox_image_unavailable">Picture unavailable</string>
+    <string name="message_channel_name">Messages from wake-ups</string>
+    <string name="message_notification_title">Message from %1$s</string>
+    <string name="message_notification_picture">Sent a picture</string>
 </resources>

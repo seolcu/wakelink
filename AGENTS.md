@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to coding agents when working with code in this repository.
 
 ## What this is
 
@@ -229,6 +229,13 @@ auto-restart doesn't silence the morning. Consequences to respect:
   1280 px JPEG, GIFs kept as-is up to 3 MB). The picture loads alongside
   the sound and shows on `RingingActivity` when ready (`ringingImage`).
   Receivers can turn pictures off (`showImages`).
+- A wake's message and picture outlive the alarm: `AlarmForegroundService`
+  saves them to `data/ReceivedWakes` (device-protected, newest 30) and,
+  once the ring ends, posts a quiet notification per wake
+  (`inbox/WakeMessageNotifier`, channel `wake_messages`) that opens the
+  "received messages" screen (`inbox/InboxScreen`, top bar of
+  `ContactsScreen`). Entries keep the image ref + content key, so a picture
+  the cache has since dropped is downloaded again.
 - `MediaCache` (`SoundCache`, `ImageCache`) keeps decrypted copies in
   device-protected storage, named by the server-side SHA-256; it verifies
   that hash (and the AES-GCM tag) on download.
@@ -264,6 +271,16 @@ alarm path reads it, even before unlock) **and** mirrored to the server via
 `ArmedSync` (`PUT /v1/me/accepting`, re-sent on every unlocked start).
 Always change it through `ArmedSync.set`, which also silences a wake that's
 ringing at the time. Self-test alarms (trigger id < 0) ignore the switch.
+
+Switching it off asks for how long (`status/PauseWakeDialog.kt`: hours, or
+until switched back on), because a forgotten switch silently defeats the
+app. A pause's end time is honored in three independent places, so any one
+of them failing doesn't strand the user: `SettingsRepository.armed` counts an
+ended pause as on, the server does too (`resume_at` on `PUT
+/v1/me/accepting`, stored as `users.accepting_resumes_at`, checked via
+`User.AcceptsWakesAt`), and `ArmedResumeReceiver` (an inexact AlarmManager
+alarm, re-set by `ArmedSync.resumeIfDue` on every process start) switches it
+back on for real.
 
 Each pairing also has the receiver's per-contact consent
 (`a_accepts_from_b` / `b_accepts_from_a`, set via `PATCH

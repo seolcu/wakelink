@@ -49,6 +49,9 @@ class WakeLinkApplication : Application() {
             settings.migrateLegacyIfNeeded()
             restorePendingDndOverride(this@WakeLinkApplication)
         }
+        // A pause of "receiving wake-ups" that ended while the process (or
+        // phone) was down, or whose alarm a reboot dropped.
+        appScope.launch { ArmedSync.resumeIfDue(this@WakeLinkApplication) }
         if (isUserUnlocked(this)) onUserUnlocked()
     }
 
@@ -85,6 +88,19 @@ class WakeLinkApplication : Application() {
             )
         )
 
+        // What came with a wake, left behind after the alarm stops. Quiet: the
+        // alarm itself was the loud part.
+        nm.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_MESSAGES,
+                getString(R.string.message_channel_name),
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ).apply {
+                setSound(null, null)
+                enableVibration(false)
+            }
+        )
+
         // Audio is played manually by AlarmForegroundService on
         // STREAM_ALARM (not via the channel's own sound), so we get exact
         // control over looping/volume/DND-bypass timing -- the channel's
@@ -107,5 +123,6 @@ class WakeLinkApplication : Application() {
         private const val LEGACY_CHANNEL_ARMED = "armed_status"
         private const val LEGACY_ARMED_NOTIFICATION_ID = 1
         const val CHANNEL_ALARM = "wake_alarm"
+        const val CHANNEL_MESSAGES = "wake_messages"
     }
 }

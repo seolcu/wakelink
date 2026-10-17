@@ -26,7 +26,7 @@ Forgot to set an alarm? Someone you trust can still wake you up.
 - **Rings through silent and vibrate mode**, with no special permission
 - **Tells the sender whether it actually rang**, not just that it was sent, and when they stopped the alarm
 - **Only people who both agreed can connect**, and either side can stop it anytime
-- **Your sound, your picture**: pick a built-in sound, record your voice or send an audio file, attach a photo or GIF (even one you take on the spot), and add a short message to show on their alarm screen
+- **Your sound, your picture**: pick a built-in sound, record your voice or send an audio file, attach a photo or GIF (even one you take on the spot), and add a short message to show on their alarm screen; the receiver can look at it again after the alarm
 - **End-to-end encrypted**: names, messages, recordings, files and pictures are encrypted for the receiver's phone; the server only relays ciphertext
 - **The receiver stays in control** of volume (with an optional gradual rise), which sounds others may choose, and whether pictures show
 - **Rings even before the first unlock** after a reboot, e.g. an overnight auto-restart
@@ -57,7 +57,7 @@ Android's silent mode mutes ringtones and notification sounds, but **not the ala
 - **Mutual pairing**: one person creates an invite code and the other has to type it in. Nobody can be added behind their back.
 - **Permission per direction**: "I can wake you, but you can't wake me" is a valid setup, and each side controls its own.
 - **Always revocable**: turn the app off, block one person, or disconnect entirely, anytime.
-- **Always in view**: the top of the app shows whether you can currently be woken, with a switch to turn it off.
+- **Always in view**: the top of the app shows whether you can currently be woken, with a switch to turn it off -- for a few hours, so it can't stay off by mistake, or until you turn it back on.
 - **No spamming**: one wake-up per person every 30 seconds, at most 20 per 24 hours.
 - **Private by design**: wake details and uploads are end-to-end encrypted when both apps support it; uploads can only be fetched by people the uploader may wake, and are deleted with the account.
 

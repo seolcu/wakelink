@@ -94,7 +94,11 @@ data class RotateKeyResponse(
  */
 data class TriggerRequest(val sound: String? = null, val image: String? = null, val sealed: String? = null)
 
-data class AcceptingRequest(val accepting: Boolean)
+data class AcceptingRequest(
+    val accepting: Boolean,
+    /** Unix seconds when a pause ends by itself; null = until switched back on. */
+    @Json(name = "resume_at") val resumeAt: Long? = null,
+)
 
 data class PublicKeyRequest(@Json(name = "public_key") val publicKey: String)
 

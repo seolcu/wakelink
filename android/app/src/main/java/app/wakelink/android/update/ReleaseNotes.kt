@@ -4,7 +4,7 @@ package app.wakelink.android.update
  * GitHub release notes, split by language and parsed into the few markdown
  * constructs our releases use, so the update dialog can show them as text
  * instead of raw `###`/`**`. Release notes are written as a `## English`
- * section followed by `## 한국어` (see CLAUDE.md); anything else is one
+ * section followed by `## 한국어` (see AGENTS.md); anything else is one
  * language-less section. Pure Kotlin, unit-tested.
  */
 object ReleaseNotes {

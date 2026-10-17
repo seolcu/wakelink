@@ -26,6 +26,7 @@ import androidx.compose.material.icons.rounded.DoNotDisturbOn
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.Inbox
 import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.MusicNote
@@ -41,6 +42,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material.icons.rounded.ChatBubbleOutline
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -79,6 +82,7 @@ import androidx.compose.ui.unit.dp
 import app.wakelink.android.R
 import app.wakelink.android.crypto.WakeComposer
 import app.wakelink.android.data.ArmedSync
+import app.wakelink.android.data.ReceivedWakes
 import app.wakelink.android.data.SettingsRepository
 import app.wakelink.android.data.TokenStore
 import app.wakelink.android.images.ImagePickerSheet
@@ -94,7 +98,11 @@ import app.wakelink.android.sounds.SoundPickerSheet
 import app.wakelink.android.sounds.SoundRef
 import app.wakelink.android.sounds.parseSoundRef
 import app.wakelink.android.sounds.soundLabel
+import app.wakelink.android.status.ArmedState
 import app.wakelink.android.status.DeviceReadiness
+import app.wakelink.android.status.PauseWakeDialog
+import app.wakelink.android.status.armedSupportingText
+import app.wakelink.android.status.rememberArmedState
 import app.wakelink.android.ui.OnResume
 import app.wakelink.android.ui.components.Avatar
 import app.wakelink.android.ui.components.StatusKind
@@ -161,7 +169,13 @@ private data class WakeStatus(val kind: StatusKind, val text: String)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ContactsScreen(onOpenPairing: () -> Unit, onOpenSettings: () -> Unit, onOpenSetup: () -> Unit, onAccountLost: () -> Unit) {
+fun ContactsScreen(
+    onOpenPairing: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenSetup: () -> Unit,
+    onOpenInbox: () -> Unit,
+    onAccountLost: () -> Unit,
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val tokenStore = remember { TokenStore(context) }
@@ -172,8 +186,9 @@ fun ContactsScreen(onOpenPairing: () -> Unit, onOpenSettings: () -> Unit, onOpen
     var loadError by remember { mutableStateOf<String?>(null) }
     val warnings = remember { mutableStateListOf<String>() }
     var popupWarnings by remember { mutableStateOf<List<String>>(emptyList()) }
-    val settings = remember { SettingsRepository(context) }
-    val armed by settings.armed.collectAsState(initial = true)
+    val armedState = rememberArmedState()
+    val unseenMessages by remember { ReceivedWakes(context).hasUnseen }.collectAsState(initial = false)
+    var choosingPause by remember { mutableStateOf(false) }
 
     var accountLost by remember { mutableStateOf(false) }
 
@@ -257,12 +272,27 @@ fun ContactsScreen(onOpenPairing: () -> Unit, onOpenSettings: () -> Unit, onOpen
         )
     }
 
+    if (choosingPause) {
+        PauseWakeDialog(
+            onPause = { resumeAt ->
+                choosingPause = false
+                scope.launch { ArmedSync.set(context, false, resumeAt) }
+            },
+            onDismiss = { choosingPause = false },
+        )
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text("WakeLink", style = MaterialTheme.typography.titleLarge) },
                 actions = {
+                    IconButton(onClick = onOpenInbox) {
+                        BadgedBox(badge = { if (unseenMessages) Badge() }) {
+                            Icon(Icons.Rounded.Inbox, contentDescription = stringResource(R.string.inbox_title))
+                        }
+                    }
                     IconButton(onClick = { scope.launch { reload() } }) {
                         Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.contacts_refresh))
                     }
@@ -296,7 +326,9 @@ fun ContactsScreen(onOpenPairing: () -> Unit, onOpenSettings: () -> Unit, onOpen
                 // Whether contacts can wake this phone is always visible here
                 // (it used to be an always-on notification).
                 item(key = "armed") {
-                    ArmedCard(armed) { value -> scope.launch { ArmedSync.set(context, value) } }
+                    ArmedCard(armedState) { value ->
+                        if (value) scope.launch { ArmedSync.set(context, true) } else choosingPause = true
+                    }
                 }
                 if (warnings.isNotEmpty()) {
                     item(key = "warnings") { WarningsBanner(warnings, onOpenSettings) }
@@ -326,7 +358,8 @@ fun ContactsScreen(onOpenPairing: () -> Unit, onOpenSettings: () -> Unit, onOpen
 }
 
 @Composable
-private fun ArmedCard(armed: Boolean, onChange: (Boolean) -> Unit) {
+private fun ArmedCard(state: ArmedState, onChange: (Boolean) -> Unit) {
+    val armed = state.armed
     Card(
         colors = CardDefaults.cardColors(
             containerColor = if (armed) WakeTheme.status.successContainer else MaterialTheme.colorScheme.surfaceVariant,
@@ -346,10 +379,7 @@ private fun ArmedCard(armed: Boolean, onChange: (Boolean) -> Unit) {
                     stringResource(if (armed) R.string.contacts_armed_on else R.string.contacts_armed_off),
                     style = MaterialTheme.typography.titleSmall,
                 )
-                Text(
-                    stringResource(if (armed) R.string.settings_armed_on else R.string.settings_armed_off),
-                    style = MaterialTheme.typography.bodySmall,
-                )
+                Text(armedSupportingText(state), style = MaterialTheme.typography.bodySmall)
             }
             Switch(checked = armed, onCheckedChange = onChange)
         }
